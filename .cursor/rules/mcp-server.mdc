@@ -1,0 +1,30 @@
+---
+description: MCP spec 2025-11-25 server conventions for this repo.
+globs: src/mcp_financial_data/server.py, src/mcp_financial_data/tools/**/*.py, src/mcp_financial_data/apps/**/*.py
+alwaysApply: false
+---
+
+# MCP server conventions (spec 2025-11-25)
+
+When editing the FastMCP server or any tool/UI registration:
+
+1. **Tool registration** uses `@mcp.tool()` with explicit `name`, `description`,
+   and a Pydantic input model. Output is also a Pydantic model — never a dict.
+2. **Errors are typed.** Tool errors raise `McpError` from the SDK; never
+   return a plain string error. Map domain errors with a tiny adapter.
+3. **Streamable HTTP transport only.** The server is launched as
+   `mcp.run(transport="streamable-http", host=..., port=...)`. No stdio mode.
+4. **Capability advertisement** must include `tools.listChanged = false` until
+   we ship dynamic tool registration in P9 (terraform-ai-deploy).
+5. **MCP Apps inline UI** components live under `src/mcp_financial_data/apps/`
+   and register via the spec's `ui` capability. Each component has a typed
+   props schema mirroring the matching tool's output.
+6. **OAuth scopes per tool** are declared next to the tool. We currently use
+   two scopes: `mcp:read` (lookups, fetches) and `mcp:tools` (extractions
+   that consume Anthropic credits).
+7. **Logging.** Every tool emits one structlog event at start (`tool.start`)
+   and one at end (`tool.end` with `duration_ms`, `tokens_in`, `tokens_out`,
+   `cost_usd`).
+8. **No prebuilt agents.** Per master rule §6, do NOT use
+   `langgraph.prebuilt.create_react_agent` in this server. The MCP server is
+   not an agent — it is a tool surface called BY agents.

@@ -1,0 +1,144 @@
+# .cursorrules — mcp-financial-data
+#
+# This file extends the master portfolio rules at ~/.cursor/rules/portfolio.mdc.
+# Copy of the master is included verbatim below for repo-local reading; the
+# project-specific deltas come AFTER the master block.
+# ============================================================================
+# MASTER (verbatim from portfolio SPRINT_PLAN §C.1) — DO NOT EDIT IN-REPO.
+# Edit ~/.cursor/rules/portfolio.mdc and re-sync.
+# ============================================================================
+
+# .cursorrules — Sebastien Henry portfolio (2026 H1)
+# Applies to ALL 9 portfolio repos under github.com/SebAustin/*. Per-repo
+# .cursorrules files extend (not replace) these.
+
+## 1. Identity
+You are pair-programming with Sebastien Henry — a senior engineer with 19 years
+of experience. He makes architecture decisions; you generate code. Do NOT ask
+clarifying questions about scope already specified. Do NOT narrate. Implement
+exactly what is asked, then stop.
+
+## 2. Stack (2026-current, non-negotiable)
+- Python 3.12. uv 0.5+ for dependency management. ruff 0.7+. mypy --strict.
+- pydantic v2.9+. FastAPI 0.115+. pytest 8+. httpx 0.28+ (never `requests`).
+- LangGraph 1.x (StateGraph, PostgresSaver, interrupt). LangChain 1.x.
+- Anthropic SDK ≥ 0.40 (Claude Sonnet 4.5 / Opus 4.7, Citations API enabled).
+- MCP spec 2025-11-25. Official `mcp` Python SDK 1.x; FastMCP 2.x for ergonomics.
+- Snowflake Cortex GA features as of May 2026 only.
+- Terraform 1.10+ / OpenTofu 1.8+. AWS provider 6.x. Google provider 6.x.
+- Solidity 0.8.26. Foundry only (no Hardhat). solc pinned in foundry.toml.
+
+## 3. Type safety
+- Every public function has full type hints. Every pydantic model uses
+  `model_config = ConfigDict(extra="forbid")` where appropriate.
+- `mypy --strict src/` must pass before any PR is merged.
+- No `# type: ignore` without a one-line comment explaining why.
+
+## 4. Testing
+- Every module has matching tests under `tests/unit/`.
+- `pytest-asyncio` in `strict` mode. Network mocked with `respx`.
+- Coverage gate: 85% line coverage on `src/`.
+- Integration tests marked `@pytest.mark.integration` and skipped by default.
+
+## 5. Evals
+- Every project has an `evals/` directory with one runnable harness.
+- Eval output is JSONL (one row per case, summary row last).
+- Every metric is numeric. LLM-as-judge is paired with at least one deterministic
+  metric (exec-accuracy, F1, recall@k, NDCG@k, latency).
+- CI runs a smoke slice on every PR and posts the delta as a sticky comment.
+
+## 6. Forbidden patterns
+- `print()` in library code (use `structlog` or `logging`).
+- Bare `except:` — always name the exception.
+- `subprocess.run(shell=True)` — never.
+- Inline JSON strings for IAM / SQL DDL — use data sources / DSLs.
+- Hardcoded credentials, account IDs, project IDs. Use env + pydantic-settings.
+- `from langgraph.prebuilt import create_react_agent` shortcuts — always
+  explicit `StateGraph` for auditability.
+- LLM-generated security-critical decisions (sanctions matching, refund
+  approval, swap blocking) without a deterministic rule firing first.
+
+## 7. Citations contract
+- Anywhere user-facing claims reference source documents (RAG, SAR memos, match
+  rationales, adverse media findings), the Anthropic Citations API is enabled
+  (`citations={"enabled": True}`) and every text block in the response must
+  carry citations. Uncited claims are dropped or tagged `[INFERENCE]`.
+
+## 8. Reproducibility
+- All random seeds set. `PYTHONHASHSEED=0` in containers. Sort everything that
+  iterates in order-dependent code.
+- Pin every direct dependency. Pin Docker base images by sha256 digest, not tag.
+- Each eval result records: git SHA, model id, judge model id, harness version,
+  host info, wall-clock, token counts, $ cost.
+
+## 9. Documentation
+- Every repo: README.md with a Mermaid architecture diagram, eval table with
+  numeric targets, and 3–5 source citations to real 2026 specs/papers/blog posts.
+- Every architectural decision deviating from defaults gets an ADR in `docs/adr/`
+  using MADR format.
+- Conventional commits. PR descriptions reference an issue and include the
+  eval delta JSON.
+
+## 10. When in doubt
+Prefer the more conservative, more verbose, more logged path. These repos will
+be read by Anthropic / Cursor / Snowflake hiring managers. Trust is the product.
+
+# ============================================================================
+# PROJECT DELTAS — mcp-financial-data
+# ============================================================================
+
+## P1. MCP spec compliance
+- Target: MCP spec 2025-11-25. The server is a streamable-HTTP MCP server
+  (NOT stdio) because it is also an OAuth 2.1 resource server. Capability
+  advertisement at startup uses the latest schema version.
+- Every tool registered with `FastMCP` has: a typed pydantic input model, a
+  typed pydantic output model, a docstring (becomes the tool description),
+  and a structured-log line at start + end.
+
+## P2. SEC EDGAR Fair Access compliance (HARD)
+- Every EDGAR HTTP request MUST include the User-Agent header sourced from
+  `EDGAR_USER_AGENT` env var, formatted "Name <contact@example.com>". A
+  request without a contact UA is a hard failure (raise; do not fall back).
+- Rate limit ≤ 10 req/sec across the process. Use `asyncio.Semaphore` +
+  `tenacity` exponential backoff on 429.
+- Cache responses for ≥ 24 h locally (Postgres or SQLite) so repeat eval runs
+  do not pound the EDGAR endpoint.
+
+## P3. Citations are non-optional in the 10-K extractor
+- `extractors/tenk.py` calls Claude Sonnet 4.5 with `citations={"enabled": True}`
+  on every document block (per Anthropic Citations API).
+- The output type `CitedClaim` carries `text: str` AND `citations: list[Citation]`.
+- Any model-generated text returned WITHOUT a `citations` array is either
+  dropped or wrapped in `[INFERENCE]` and demoted to a `notes` field — never
+  surfaced as a fact.
+- Tests verify: (a) shape, (b) at least one citation per fact in fixtures.
+
+## P4. OAuth 2.1 resource-server scope
+- This repo IS the resource server, not the IdP. Validate JWT against
+  `MCP_OAUTH_JWKS_URL`, audience = `MCP_OAUTH_AUDIENCE`, required scopes
+  from `MCP_OAUTH_REQUIRED_SCOPES`.
+- Tokens are validated on every request (no caching beyond JWKS public-key
+  rotation TTL). PKCE is enforced for any /authorize round-trip we expose.
+- A failing token check returns RFC 6750 `WWW-Authenticate: Bearer error=...`
+  with the exact error spec keywords (`invalid_token`, `insufficient_scope`).
+
+## P5. Spend cap
+- `MAX_API_SPEND_USD` env var is read at process start. The 10-K extractor and
+  the eval harness both increment a process-local counter and refuse new calls
+  when the cap is hit. CI defaults to `--offline` so this never fires there.
+
+## P6. Offline-first development
+- Every external client (EDGAR, FRED, Polygon, Anthropic) is fronted by a
+  thin port (`Protocol`) so tests inject `respx` mocks. The eval harness
+  takes `--offline` to use canned fixtures and a deterministic stub judge.
+
+## P7. Streamable HTTP not stdio
+- The server is launched with `python -m mcp_financial_data.server` and
+  binds to `MCP_HOST:MCP_PORT`. Local-only stdio mode is OUT of scope for
+  this project — pick the support-agent project (P6) if stdio is needed.
+
+## P8. Anchor company audience
+- Every Cursor-generated file in this repo will be read by an Anthropic FDE,
+  Bridgewater / Citadel quant, or a Cursor founder. Optimize for: clear types,
+  one-screen functions, every sketch-y assumption captured in a NOTE comment
+  with a TODO and a prompt link.

@@ -1,0 +1,46 @@
+name: eval-nightly
+
+on:
+  schedule:
+    - cron: "17 7 * * *"   # 07:17 UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONHASHSEED: "0"
+  UV_VERSION: "0.5.4"
+  EVAL_OFFLINE: "0"
+
+jobs:
+  full-eval:
+    name: full eval against live APIs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+      - name: Install Python
+        run: uv python install 3.12
+      - name: uv sync (frozen)
+        run: uv sync --frozen --all-extras
+      - name: Full eval
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
+          EDGAR_USER_AGENT: ${{ secrets.EDGAR_USER_AGENT }}
+          MAX_API_SPEND_USD: "5"
+        run: uv run python -m mcp_financial_data.evals.harness --full
+      - name: Upload eval artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-runs-nightly-${{ github.run_id }}
+          path: evals/runs/
+          retention-days: 30

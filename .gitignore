@@ -1,0 +1,80 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+*.egg
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# uv
+.uv-cache/
+
+# Test/coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
+
+# Eval runs (per-SHA artifacts; only summary committed if needed)
+evals/runs/*
+!evals/runs/.gitkeep
+
+# Eval response cache (SQLite)
+evals/.cache.sqlite*
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Editor / OS
+.idea/
+.vscode/
+!.vscode/extensions.json
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Cursor / Claude / AI tooling local state
+.cursor/state/
+.cursor/locks/
+.claude/
+CLAUDE.local.md
+
+# Loom / recordings (kept out of repo)
+*.mp4
+*.mov
+*.gif
+recordings/
+
+# Docker
+.docker/
