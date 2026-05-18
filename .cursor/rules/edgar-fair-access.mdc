@@ -1,0 +1,36 @@
+---
+description: SEC EDGAR Fair Access policy compliance (User-Agent + 10/sec rate limit).
+globs: src/mcp_financial_data/tools/edgar.py, tests/unit/tools/test_edgar.py
+alwaysApply: false
+---
+
+# EDGAR Fair Access compliance
+
+The SEC publishes a Fair Access policy for the EDGAR public APIs. Violation
+gets your IP banned. We treat compliance as a hard build constraint.
+
+## Hard rules
+
+1. **User-Agent header is required and sourced from env.**
+   - Env var: `EDGAR_USER_AGENT`.
+   - Format: `"<Sender Name> <contact@example.com>"`.
+   - Missing or empty UA → raise `EdgarConfigError` BEFORE any HTTP call.
+2. **Rate limit ≤ 10 requests / second** across the process.
+   - Implement with a single shared `asyncio.Semaphore(10)` plus a token-bucket
+     timer; do NOT rely on per-task throttling.
+3. **Retries.**
+   - Use `tenacity` with exponential backoff on 429 / 5xx.
+   - Maximum 3 retries, total wait ≤ 8 s.
+4. **Caching.**
+   - Cache GET responses for ≥ 24 h in Postgres (`evals/.cache.sqlite` for
+     local CI). Key on full URL + Accept header.
+5. **Endpoints used.**
+   - `https://data.sec.gov/submissions/CIK{...}.json`
+   - `https://data.sec.gov/api/xbrl/companyfacts/CIK{...}.json`
+   - `https://www.sec.gov/Archives/edgar/data/{CIK}/{accn}/{file}`
+   - All other endpoints require an ADR before use.
+6. **Tests.**
+   - One test asserts the UA header is present and matches the env value.
+   - One test asserts that 10 concurrent calls take ≥ 0.9 s wall-clock
+     (rate-limit smoke).
+   - One test asserts a 429 response triggers exactly one retry path.

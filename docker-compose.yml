@@ -1,0 +1,39 @@
+# Local dev stack: Postgres for the response cache + the MCP server.
+# Eval harness can hit Postgres for cached EDGAR/FRED/Polygon/Anthropic responses.
+services:
+  postgres:
+    image: postgres:16-alpine@sha256:16bc17c64a573ef34162af9298258d1aec548232985b33ed7b1eac33ba35c229
+    container_name: mcp_financial_data_pg
+    environment:
+      POSTGRES_USER: mcp
+      POSTGRES_PASSWORD: mcp
+      POSTGRES_DB: mcp_financial_data
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mcp -d mcp_financial_data"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  server:
+    build: .
+    container_name: mcp_financial_data_server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_DSN: postgresql://mcp:mcp@postgres:5432/mcp_financial_data
+      MCP_HOST: 0.0.0.0
+      MCP_PORT: "8765"
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+    env_file:
+      - .env
+    ports:
+      - "8765:8765"
+
+volumes:
+  pgdata:

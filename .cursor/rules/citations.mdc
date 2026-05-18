@@ -1,0 +1,35 @@
+---
+description: Anthropic Citations API contract for the 10-K extractor.
+globs: src/mcp_financial_data/extractors/**/*.py, tests/unit/extractors/**/*.py
+alwaysApply: false
+---
+
+# Citations contract — mcp-financial-data
+
+The 10-K extractor is **citation-grounded by construction**. Hiring managers
+will paste a 10-K into the demo and check whether every claim is sourced.
+
+## Hard rules
+
+1. **Anthropic call shape.** Use `anthropic.AsyncAnthropic.messages.create(...)`
+   with one `document` content block per 10-K section, each carrying
+   `citations={"enabled": True}` and a stable `title`.
+2. **Output type.** Every claim returned by `extract_tenk_section` is a
+   `CitedClaim(text: str, citations: list[Citation])`. `Citation` carries
+   `document_title`, `start_char_index`, `end_char_index`, `cited_text`.
+3. **Drop or demote.** Any text block in the model response that has no
+   `citations` array is either dropped (preferred) or wrapped in a `notes`
+   field with a `[INFERENCE]` prefix. Never returned as a fact.
+4. **Tests.** Every test under `tests/unit/extractors/` asserts:
+   - shape (`isinstance(c, CitedClaim) for c in result`)
+   - at least one citation per `CitedClaim`
+   - `cited_text` actually appears in the source document content.
+5. **Evals.** The harness records `citation_coverage = cited_facts / total_facts`
+   per case. The CI smoke slice asserts `citation_coverage == 1.0`.
+
+## Don'ts
+
+- Don't synthesize "the company says ..." sentences without a citation.
+- Don't merge two citations into one — one cited region per claim.
+- Don't lower the temperature as a substitute for citations. Citations are
+  the audit trail; temperature is just a hyperparameter.
