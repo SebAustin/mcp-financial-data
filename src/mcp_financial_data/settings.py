@@ -51,6 +51,17 @@ class Settings(BaseSettings):
     mcp_oauth_required_scopes: str = Field(
         default="mcp:read mcp:tools", alias="MCP_OAUTH_REQUIRED_SCOPES"
     )
+    mcp_oauth_dev_secret: SecretStr | None = Field(
+        default=None,
+        alias="MCP_OAUTH_DEV_SECRET",
+        description=(
+            "HS256 shared secret used ONLY by issue_dev_token() and the matching"
+            " validator path. Refused when the issuer is not a local dev URL."
+        ),
+    )
+    mcp_oauth_jwks_ttl_seconds: int = Field(
+        default=3600, ge=1, le=86_400, alias="MCP_OAUTH_JWKS_TTL_SECONDS"
+    )
 
     mcp_host: str = Field(default="127.0.0.1", alias="MCP_HOST")
     mcp_port: int = Field(default=8765, ge=1, le=65535, alias="MCP_PORT")
@@ -69,7 +80,7 @@ class Settings(BaseSettings):
     log_format: Literal["json", "console"] = Field(default="json", alias="LOG_FORMAT")
 
     @property
-    def required_scopes_list(self) -> tuple[str, ...]:
+    def required_scopes_list(self: Settings) -> tuple[str, ...]:
         """Required OAuth scopes split from the space-delimited env var."""
         return tuple(s for s in self.mcp_oauth_required_scopes.split() if s)
 

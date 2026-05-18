@@ -16,7 +16,7 @@ pytest_plugins = ("respx",)
 
 
 @pytest.fixture(autouse=True)
-def set_test_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+def _set_test_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Set deterministic env vars so Settings has predictable defaults in tests.
 
     Reloads ``Settings`` after env mutation so tests get a fresh cached value.
@@ -30,6 +30,7 @@ def set_test_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setenv("MCP_OAUTH_AUDIENCE", "mcp-financial-data")
     monkeypatch.setenv("MCP_OAUTH_JWKS_URL", "https://idp.local.test/.well-known/jwks.json")
     monkeypatch.setenv("MCP_OAUTH_REQUIRED_SCOPES", "mcp:read mcp:tools")
+    monkeypatch.setenv("MCP_OAUTH_DEV_SECRET", "unit-test-hs256-shared-secret-do-not-ship")
     monkeypatch.setenv("MAX_API_SPEND_USD", "50")
     monkeypatch.setenv("EVAL_OFFLINE", "1")
     monkeypatch.setenv("LOG_FORMAT", "json")
