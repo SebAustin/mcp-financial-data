@@ -76,13 +76,11 @@ _DEFAULT_CACHE: CacheStore = get_default_cache(get_settings())
 
 def _require_api_key(settings: Settings) -> str:
     secret = settings.polygon_api_key
-    if secret is None:
+    raw = secret.get_secret_value().strip() if secret is not None else ""
+    if not raw:
         raise PolygonConfigError(
             "POLYGON_API_KEY is not set. Get a key at https://polygon.io/dashboard/api-keys"
         )
-    raw = secret.get_secret_value().strip()
-    if not raw:
-        raise PolygonConfigError("POLYGON_API_KEY is empty.")
     return raw
 
 

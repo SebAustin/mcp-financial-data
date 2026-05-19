@@ -50,7 +50,8 @@ def test_aggregate_bar_model_validates_positive_prices() -> None:
 
 @pytest.mark.asyncio
 async def test_fetch_aggregates_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("POLYGON_API_KEY", raising=False)
+    # Use setenv("") so the absence case also covers a blank .env placeholder.
+    monkeypatch.setenv("POLYGON_API_KEY", "")
     from mcp_financial_data.settings import reload_settings
 
     reload_settings()

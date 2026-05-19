@@ -84,13 +84,11 @@ _DEFAULT_CACHE: CacheStore = get_default_cache(get_settings())
 
 def _require_api_key(settings: Settings) -> str:
     secret = settings.fred_api_key
-    if secret is None:
+    raw = secret.get_secret_value().strip() if secret is not None else ""
+    if not raw:
         raise FredConfigError(
             "FRED_API_KEY is not set. Get a free key at https://fred.stlouisfed.org/docs/api/api_key.html"
         )
-    raw = secret.get_secret_value().strip()
-    if not raw:
-        raise FredConfigError("FRED_API_KEY is empty.")
     return raw
 
 
