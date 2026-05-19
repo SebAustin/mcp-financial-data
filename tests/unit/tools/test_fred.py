@@ -47,7 +47,8 @@ def test_series_model_default_observations_empty() -> None:
 
 @pytest.mark.asyncio
 async def test_fetch_series_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("FRED_API_KEY", raising=False)
+    # Use setenv("") so the absence case also covers a blank .env placeholder.
+    monkeypatch.setenv("FRED_API_KEY", "")
     from mcp_financial_data.settings import reload_settings
 
     reload_settings()
