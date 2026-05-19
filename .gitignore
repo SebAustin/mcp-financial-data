@@ -28,6 +28,9 @@ ENV/
 # uv
 .uv-cache/
 
+# Private Cursor prompt pack -- kept locally, never published.
+prompts/
+
 # Test/coverage
 .pytest_cache/
 .coverage

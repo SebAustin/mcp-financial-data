@@ -5,9 +5,8 @@ Pointer file for any AI agent (Cursor, Claude Code, Codex) opening this repo.
 ## Read these first, in order
 
 1. `.cursorrules` — master portfolio rules + project deltas. Non-optional.
-2. `prompts/00_kickoff.md` — first-PR scope and the file map.
-3. `docs/adr/` — every architectural decision is captured here in MADR.
-4. `evals/harness.py` — the source of truth for "is this thing working".
+2. `docs/adr/` — every architectural decision is captured here in MADR.
+3. `evals/harness.py` — the source of truth for "is this thing working".
 
 ## What this repo is
 
@@ -17,18 +16,6 @@ returns citation-grounded claims, plus an MCP Apps inline UI component.
 
 Anchor audience: Anthropic Forward Deployed Engineering, Bridgewater /
 Citadel / Anthropic Finance teams.
-
-## Build order (Cursor prompt pack)
-
-| # | Prompt file | Owns |
-|---|---|---|
-| 0 | `prompts/00_kickoff.md` | repo intro, first PR shape |
-| 1 | `prompts/01_oauth_resource_server.md` | `src/mcp_financial_data/auth/oauth.py` |
-| 2 | `prompts/02_edgar_client.md` | `src/mcp_financial_data/tools/edgar.py` |
-| 3 | `prompts/03_tenk_citations_extractor.md` | `src/mcp_financial_data/extractors/tenk.py` |
-| 4 | `prompts/04_mcp_apps_ui.md` | `src/mcp_financial_data/apps/ui.py` |
-| 5 | `prompts/05_evals_full_run.md` | `evals/harness.py` real-network mode |
-| 6 | `prompts/06_ci_polish_release.md` | tag v0.1.0, Loom, README polish |
 
 ## Hard constraints (skim before generating code)
 

@@ -20,7 +20,6 @@ Hard contract (ADR 0003 + `.cursor/rules/citations.mdc`):
 4. `MAX_API_SPEND_USD` cap is enforced; the existing `ExtractorSpendCapError`
    path stays.
 
-Build order: `prompts/03_tenk_citations_extractor.md`.
 
 ## Acceptance criteria
 

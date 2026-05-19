@@ -12,7 +12,7 @@ shipped under `static/ui/tenk-summary-card.bundle.js` that renders the
 extractor's `ExtractionResult` with one citation pill per fact. Clicking
 a pill should open the SEC filing at the cited paragraph.
 
-Build order: `prompts/04_mcp_apps_ui.md`. Decision: ADR 0008 (new — to
+Decision: ADR 0008 (new — to
 be added in this PR).
 
 ## Acceptance criteria

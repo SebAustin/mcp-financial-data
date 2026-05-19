@@ -17,7 +17,7 @@ and filing-document endpoints, with full Fair Access compliance:
 - `tenacity` retries on 429 / 5xx (max 3, total wait ≤ 8 s).
 - 24-hour Postgres response cache (SQLite fallback).
 
-Build order: `prompts/02_edgar_client.md`. Hard rules:
+Hard rules:
 `.cursor/rules/edgar-fair-access.mdc`. Decision: ADR 0006 (new — to be
 added in this PR).
 

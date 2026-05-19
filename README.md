@@ -56,8 +56,6 @@ make ci                # lint + typecheck + tests + smoke eval (offline)
 make serve             # run the MCP server on $MCP_HOST:$MCP_PORT
 ```
 
-The full Cursor build order lives in [`prompts/00_kickoff.md`](prompts/00_kickoff.md).
-
 ## What's in the box
 
 | Surface | Tool / endpoint | Notes |
@@ -113,7 +111,6 @@ src/mcp_financial_data/      # the package
 tests/{unit,integration}     # pytest, 85% gate, integration skipped by default
 evals/cases/seed.jsonl       # 5 hand-authored eval cases
 evals/runs/                  # per-SHA harness output (gitignored)
-prompts/                     # Cursor prompt pack: kickoff + 6 follow-ups + Loom
 docs/adr/                    # MADR architecture decisions
 .github/                     # CI templates + issue/PR templates + dependabot
 ```

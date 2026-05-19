@@ -37,18 +37,18 @@ Run as a resource server only:
 1. Validate JWTs against `MCP_OAUTH_JWKS_URL`, audience
    `MCP_OAUTH_AUDIENCE`, and required scopes
    `MCP_OAUTH_REQUIRED_SCOPES`.
-2. Expose a `dev-token` CLI subcommand (`prompts/01_oauth_resource_server.md`)
+2. Expose a `dev-token` CLI subcommand (see `src/mcp_financial_data/auth/oauth.py`)
    that mints a short-lived HS256 JWT with the configured audience for
-   local CLI testing only — gated behind an explicit `--dev-only` flag and
+   local CLI testing only — gated behind a local-issuer runtime check and
    never enabled in container images.
 3. Reject any token whose `aud` / `iss` / `exp` / `scope` checks fail with
    RFC 6750 `WWW-Authenticate: Bearer error=...` headers.
 
 ## Consequences
 
-* The demo expects a running IdP. We document Authentik in
-  `prompts/01_oauth_resource_server.md` because it is OSS, free, and
-  Docker-Compose-able.
+* The demo expects a running IdP. Authentik is the chosen reference IdP
+  for local round-trip tests because it is OSS, free, and
+  Docker-Compose-able. See `tests/integration/auth/test_authentik.py`.
 * Production deployments swap the IdP via env vars — no code change.
 * The integration test suite uses HS256 dev tokens; the unit test suite
   asserts shape but never hits a real IdP.
