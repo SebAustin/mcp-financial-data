@@ -214,10 +214,10 @@ async def _resolve_signing_key(
         raise InvalidTokenError(f"algorithm {alg!r} not in allowlist {ALLOWED_ALGORITHMS}")
 
     if alg == "HS256":
-        secret = settings.mcp_oauth_dev_secret
-        if secret is None:
+        secret_value = _dev_secret_or_none(settings)
+        if secret_value is None:
             raise InvalidTokenError("HS256 token rejected: MCP_OAUTH_DEV_SECRET is not set")
-        return secret.get_secret_value()
+        return secret_value
 
     kid = header.get("kid")
     if not isinstance(kid, str) or not kid:
@@ -321,8 +321,8 @@ async def issue_dev_token(subject: str = "dev-user", settings: Settings | None =
             "issue_dev_token refused: issuer is not a local dev URL. "
             "Set MCP_OAUTH_ISSUER to https://idp.local.test or http://localhost."
         )
-    secret = s.mcp_oauth_dev_secret
-    if secret is None:
+    secret_value = _dev_secret_or_none(s)
+    if secret_value is None:
         raise RuntimeError("issue_dev_token refused: MCP_OAUTH_DEV_SECRET is not set.")
 
     now = int(time.time())
@@ -335,7 +335,24 @@ async def issue_dev_token(subject: str = "dev-user", settings: Settings | None =
         "scope": " ".join(s.required_scopes_list),
     }
     _log.info("oauth.dev_token.issued", subject=subject, audience=s.mcp_oauth_audience)
-    return jwt.encode(payload, secret.get_secret_value(), algorithm="HS256")
+    return jwt.encode(payload, secret_value, algorithm="HS256")
+
+
+def _dev_secret_or_none(settings: Settings) -> str | None:
+    """Return the configured dev secret, or ``None`` if absent or blank.
+
+    Treats an empty / whitespace-only ``MCP_OAUTH_DEV_SECRET`` the same as a
+    missing one. This matters because ``.env`` files commonly carry blank
+    placeholders (``MCP_OAUTH_DEV_SECRET=``) and ``pydantic-settings`` parses
+    those as ``SecretStr("")`` rather than ``None`` — so the previous
+    ``secret is None`` checks did not fire when the operator's clear intent
+    was "no secret".
+    """
+    secret = settings.mcp_oauth_dev_secret
+    if secret is None:
+        return None
+    raw = secret.get_secret_value().strip()
+    return raw or None
 
 
 # ---------------------------------------------------------------------------

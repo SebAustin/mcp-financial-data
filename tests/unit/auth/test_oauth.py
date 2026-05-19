@@ -328,7 +328,9 @@ async def test_validate_hs256_with_no_dev_secret_raises(
 ) -> None:
     forging_settings = reload_settings()
     token = _hs256_token(forging_settings)
-    monkeypatch.delenv("MCP_OAUTH_DEV_SECRET", raising=False)
+    # Realistic absence shape: blank placeholder in .env / env. ``delenv``
+    # alone is not sufficient because pydantic-settings still reads ``.env``.
+    monkeypatch.setenv("MCP_OAUTH_DEV_SECRET", "")
     settings = reload_settings()
     with pytest.raises(InvalidTokenError, match="MCP_OAUTH_DEV_SECRET"):
         await validate_bearer_token(token, settings)
@@ -395,7 +397,10 @@ async def test_issue_dev_token_accepts_localhost_issuer(
 async def test_issue_dev_token_requires_secret(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.delenv("MCP_OAUTH_DEV_SECRET", raising=False)
+    # Use ``setenv("")`` rather than ``delenv`` so the test also covers the
+    # realistic case where ``.env`` carries a blank placeholder
+    # (``MCP_OAUTH_DEV_SECRET=``).
+    monkeypatch.setenv("MCP_OAUTH_DEV_SECRET", "")
     settings = reload_settings()
     with pytest.raises(RuntimeError, match="MCP_OAUTH_DEV_SECRET"):
         await issue_dev_token(settings=settings)
