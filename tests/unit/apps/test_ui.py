@@ -82,6 +82,7 @@ def test_render_tenk_summary_card_aapl_risk_factors() -> None:
 
     assert envelope.props["cik"] == "0000320193"
     assert envelope.props["company_name"] == "Apple Inc."
+    assert envelope.props["extraction"]["latency_ms"] == 0.0
 
 
 def test_render_envelope_facts_match_extraction() -> None:

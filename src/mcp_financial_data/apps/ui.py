@@ -26,11 +26,12 @@ TENK_SUMMARY_CARD_RESOURCE_URI: Final[str] = f"{SERVER_UI_SCHEME}/{TENK_SUMMARY_
 
 #: Wheel-relative path baked by hatch ``force-include`` (ADR 0008).
 BUNDLE_RELATIVE_PATH: Final[str] = "static/ui/tenk-summary-card.bundle.js"
+HTML_RELATIVE_PATH: Final[str] = "static/ui/tenk-summary-card.html"
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-_PKG_STATIC_BUNDLE = (
-    Path(__file__).resolve().parent.parent / "static" / "ui" / "tenk-summary-card.bundle.js"
-)
+_PKG_STATIC_DIR = Path(__file__).resolve().parent.parent / "static" / "ui"
+_PKG_STATIC_BUNDLE = _PKG_STATIC_DIR / "tenk-summary-card.bundle.js"
+_PKG_STATIC_HTML = _PKG_STATIC_DIR / "tenk-summary-card.html"
 
 
 def _bundle_path() -> Path:
@@ -154,6 +155,22 @@ def render_tenk_summary_card(props: TenKSummaryCardProps) -> dict[str, object]:
     return envelope.model_dump(mode="json")
 
 
+def _html_path() -> Path:
+    """Resolve the MCP Apps HTML shell for dev checkouts and installed wheels."""
+    if _PKG_STATIC_HTML.is_file():
+        return _PKG_STATIC_HTML
+    return REPO_ROOT / HTML_RELATIVE_PATH
+
+
 def read_bundle_bytes() -> bytes:
-    """Return the shipped bundle bytes for ``resources/read`` handlers."""
+    """Return the shipped JS bundle bytes for ``resources/read`` handlers."""
     return _bundle_path().read_bytes()
+
+
+def read_resource_html() -> str:
+    """Return the HTML shell that loads the TenKSummaryCard bundle."""
+    path = _html_path()
+    if not path.is_file():
+        msg = f"MCP Apps HTML missing at {path}; run `make ui-build` from the repo root."
+        raise FileNotFoundError(msg)
+    return path.read_text(encoding="utf-8")

@@ -19,6 +19,7 @@ export type TenKSummaryCardProps = {
     input_tokens: number;
     output_tokens: number;
     cost_usd: number;
+    latency_ms: number;
   };
   cik: string;
   company_name: string;
@@ -81,6 +82,7 @@ function Footer({ extraction }: { extraction: TenKSummaryCardProps["extraction"]
         Tokens: {extraction.input_tokens} in / {extraction.output_tokens} out
       </span>
       <span>Cost: ${extraction.cost_usd.toFixed(4)}</span>
+      <span>Latency: {extraction.latency_ms.toFixed(1)} ms</span>
     </footer>
   );
 }

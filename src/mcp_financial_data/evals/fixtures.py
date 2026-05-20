@@ -108,6 +108,7 @@ OFFLINE_FIXTURES: dict[str, dict[str, Any]] = {
         "input_tokens": 0,
         "output_tokens": 0,
         "cost_usd": 0.0,
+        "latency_ms": 0.0,
     },
 }
 

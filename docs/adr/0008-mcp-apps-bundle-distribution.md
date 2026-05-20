@@ -36,8 +36,13 @@ expect:
    ``mcp_financial_data/static/ui`` for installed packages.
 3. **Tool wiring** — ``tenk.extract_section`` returns :class:`TenKExtractOutput`
    (``extraction`` + ``ui``) and registers ``meta.ui.resourceUri`` on the tool.
-4. **SEC URLs** — Pills use ``sec_edgar_browse_url(cik)`` →
+4. **Resource handler** — ``@mcp.resource(uri=ui://mcp-financial-data/tenk-summary-card)``
+   serves ``read_resource_html()`` (HTML shell + bundle script tag) for
+   ``resources/read``.
+5. **SEC URLs** — Pills use ``sec_edgar_browse_url(cik)`` →
    ``https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=...``.
+6. **Latency** — :class:`ExtractionResult` records ``latency_ms``; the card footer
+   displays it alongside model, tokens, and cost.
 
 ## Consequences
 
@@ -45,8 +50,8 @@ expect:
   available; otherwise edit the committed bundle and refresh ``sha256`` tests.
 * Eval cases for ``tenk.extract_section`` still compare ``ExtractionResult``
   fields only; the UI envelope is not part of ``exec_accuracy`` today.
-* FastMCP ``call_tool`` integration tests assert tool advertisement, not live
-  Anthropic extraction, to keep ``@pytest.mark.integration`` lean.
+* Integration tests call ``tenk.extract_section`` via :class:`fastmcp.Client` with a
+  monkeypatched extractor; ``resources/read`` is covered in unit + integration tests.
 
 ## References
 

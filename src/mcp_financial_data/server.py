@@ -16,8 +16,10 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from mcp_financial_data import __version__
 from mcp_financial_data.apps.ui import (
+    RESOURCE_MIME_TYPE,
     TENK_SUMMARY_CARD_RESOURCE_URI,
     TenKSummaryCardProps,
+    read_resource_html,
     render_tenk_summary_card,
 )
 from mcp_financial_data.extractors.tenk import (
@@ -114,6 +116,16 @@ def build_app(settings: Settings | None = None) -> FastMCP[Any]:
             "carries an Anthropic Citations API reference."
         ),
     )
+
+    @mcp.resource(
+        uri=TENK_SUMMARY_CARD_RESOURCE_URI,
+        name="TenK Summary Card",
+        description="Inline MCP Apps UI for citation-grounded 10-K extractions.",
+        mime_type=RESOURCE_MIME_TYPE,
+    )
+    async def _tenk_summary_card_resource() -> str:
+        """Ship the HTML shell + bundle reference for MCP Apps hosts."""
+        return read_resource_html()
 
     @mcp.tool(name="edgar.list_filings", description="List recent SEC filings for a CIK.")
     async def _edgar_list_filings(args: ListFilingsInput) -> list[EdgarFiling]:

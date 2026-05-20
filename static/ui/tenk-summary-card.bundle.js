@@ -62,6 +62,7 @@
         el("span", null, [`Model: ${ext.model}`]),
         el("span", null, [`Tokens: ${ext.input_tokens} in / ${ext.output_tokens} out`]),
         el("span", null, [`Cost: $${Number(ext.cost_usd).toFixed(4)}`]),
+        el("span", null, [`Latency: ${Number(ext.latency_ms || 0).toFixed(1)} ms`]),
       ]),
     ]);
     return root;
