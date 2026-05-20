@@ -57,6 +57,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcp_financial_data"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"static/ui" = "mcp_financial_data/static/ui"
+
 [dependency-groups]
 dev = [
     "ruff>=0.7,<1",

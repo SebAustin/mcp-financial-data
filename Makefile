@@ -68,6 +68,13 @@ serve: ## Run the MCP server locally (streamable HTTP, port from env)
 oauth-dev: ## Print a dev OAuth 2.1 token for local CLI testing
 	$(UV) run python -m $(PKG).auth.oauth dev-token
 
+.PHONY: ui-build
+ui-build: ## Build TenKSummaryCard JS bundle (requires npm + public registry)
+	@if [ ! -f ui/tenk-summary-card/package.json ]; then \
+		echo "ERROR: ui/tenk-summary-card workspace missing" >&2; exit 1; \
+	fi
+	cd ui/tenk-summary-card && npm ci && npm run build
+
 .PHONY: ci
 ci: lint typecheck test eval-smoke ## Mirror what CI runs
 
