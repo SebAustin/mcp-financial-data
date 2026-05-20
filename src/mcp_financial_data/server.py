@@ -15,6 +15,13 @@ from fastmcp import FastMCP
 from pydantic import BaseModel, ConfigDict, Field
 
 from mcp_financial_data import __version__
+from mcp_financial_data.apps.ui import (
+    RESOURCE_MIME_TYPE,
+    TENK_SUMMARY_CARD_RESOURCE_URI,
+    TenKSummaryCardProps,
+    read_resource_html,
+    render_tenk_summary_card,
+)
 from mcp_financial_data.extractors.tenk import (
     ExtractionResult,
     TenKSection,
@@ -76,6 +83,20 @@ class ExtractTenKInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     section: TenKSection
+    cik: str = Field(..., min_length=1, max_length=10, description="Issuer CIK, e.g. 0000320193.")
+    company_name: str = Field(..., min_length=1, description="Display name, e.g. Apple Inc.")
+
+
+class TenKExtractOutput(BaseModel):
+    """Extractor result plus the MCP Apps inline UI envelope."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    extraction: ExtractionResult
+    ui: dict[str, object] = Field(
+        ...,
+        description="MCP Apps UI envelope (see apps.ui.McpUiEnvelope).",
+    )
 
 
 def build_app(settings: Settings | None = None) -> FastMCP[Any]:
@@ -95,6 +116,16 @@ def build_app(settings: Settings | None = None) -> FastMCP[Any]:
             "carries an Anthropic Citations API reference."
         ),
     )
+
+    @mcp.resource(
+        uri=TENK_SUMMARY_CARD_RESOURCE_URI,
+        name="TenK Summary Card",
+        description="Inline MCP Apps UI for citation-grounded 10-K extractions.",
+        mime_type=RESOURCE_MIME_TYPE,
+    )
+    async def _tenk_summary_card_resource() -> str:
+        """Ship the HTML shell + bundle reference for MCP Apps hosts."""
+        return read_resource_html()
 
     @mcp.tool(name="edgar.list_filings", description="List recent SEC filings for a CIK.")
     async def _edgar_list_filings(args: ListFilingsInput) -> list[EdgarFiling]:
@@ -127,15 +158,34 @@ def build_app(settings: Settings | None = None) -> FastMCP[Any]:
     @mcp.tool(
         name="tenk.extract_section",
         description="Extract citation-grounded claims from a 10-K section.",
+        meta={
+            "ui": {
+                "resourceUri": TENK_SUMMARY_CARD_RESOURCE_URI,
+            }
+        },
     )
-    async def _tenk_extract(args: ExtractTenKInput) -> ExtractionResult:
+    async def _tenk_extract(args: ExtractTenKInput) -> TenKExtractOutput:
         log.info(
             "tool.start",
             tool="tenk.extract_section",
             section=args.section.section,
             doc=args.section.document_title,
         )
-        return await extract_tenk_section(args.section, settings=s)
+        extraction = await extract_tenk_section(args.section, settings=s)
+        ui = render_tenk_summary_card(
+            TenKSummaryCardProps(
+                extraction=extraction,
+                cik=args.cik,
+                company_name=args.company_name,
+            )
+        )
+        log.info(
+            "tool.end",
+            tool="tenk.extract_section",
+            n_facts=len(extraction.facts),
+            cost_usd=extraction.cost_usd,
+        )
+        return TenKExtractOutput(extraction=extraction, ui=ui)
 
     log.info("server.build_done", tools=5)
     return mcp

@@ -16,7 +16,6 @@ import pytest
 from mcp_financial_data.evals import harness
 from mcp_financial_data.evals.harness import (
     DEFAULT_CASES_PATH,
-    EvalCase,
     _git_sha,
     _load_cases,
     _make_run_id,
@@ -26,6 +25,7 @@ from mcp_financial_data.evals.harness import (
     main,
     run,
 )
+from mcp_financial_data.evals.types import EvalCase
 from mcp_financial_data.settings import reload_settings
 
 
@@ -100,7 +100,9 @@ async def test_run_one_offline_happy_path() -> None:
             ]
         },
     )
-    row = await _run_one(case, offline=True, settings=settings)
+    row = await _run_one(
+        case, offline=True, settings=settings, budget_usd=None, spend_so_far_usd=0.0
+    )
     assert row.success is True
     assert row.exec_accuracy == 1.0
     assert row.citation_coverage == 1.0
@@ -117,14 +119,16 @@ async def test_run_one_offline_fixture_missing() -> None:
         input={},
         expected={},
     )
-    row = await _run_one(case, offline=True, settings=settings)
+    row = await _run_one(
+        case, offline=True, settings=settings, budget_usd=None, spend_so_far_usd=0.0
+    )
     assert row.success is False
     assert row.exec_accuracy == 0.0
     assert "missing offline fixture" in (row.error or "")
 
 
 @pytest.mark.asyncio
-async def test_run_one_online_not_implemented(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_run_one_online_requires_dispatch_inputs(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("EVAL_OFFLINE", "0")
     settings = reload_settings()
     case = EvalCase(
@@ -134,9 +138,15 @@ async def test_run_one_online_not_implemented(monkeypatch: pytest.MonkeyPatch) -
         input={},
         expected={},
     )
-    row = await _run_one(case, offline=False, settings=settings)
+    row = await _run_one(
+        case,
+        offline=False,
+        settings=settings,
+        budget_usd=None,
+        spend_so_far_usd=0.0,
+    )
     assert row.success is False
-    assert "online mode" in (row.error or "")
+    assert row.error is not None
 
 
 @pytest.mark.asyncio

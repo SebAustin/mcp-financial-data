@@ -19,6 +19,7 @@ ADR 0007 (extractor pricing + spend cap).
 from __future__ import annotations
 
 import threading
+import time
 from typing import Any, Final, Literal
 
 import anthropic
@@ -117,6 +118,11 @@ class ExtractionResult(BaseModel):
     input_tokens: int = Field(default=0, ge=0)
     output_tokens: int = Field(default=0, ge=0)
     cost_usd: float = Field(default=0.0, ge=0.0)
+    latency_ms: float = Field(
+        default=0.0,
+        ge=0.0,
+        description="Wall-clock milliseconds for the Anthropic round-trip.",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -376,6 +382,7 @@ async def extract_tenk_section(
         max_tokens=max_tokens,
     )
 
+    t0 = time.perf_counter()
     try:
         response = await _call_anthropic(
             client,
@@ -388,6 +395,7 @@ async def extract_tenk_section(
             await client.close()
 
     facts, notes = _parse_response(response, section=section)
+    latency_ms = (time.perf_counter() - t0) * 1000.0
 
     input_tokens = int(response.usage.input_tokens)
     output_tokens = int(response.usage.output_tokens)
@@ -412,6 +420,7 @@ async def extract_tenk_section(
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         cost_usd=cost_usd,
+        latency_ms=latency_ms,
         total_spend_usd=new_total,
     )
 
@@ -424,4 +433,5 @@ async def extract_tenk_section(
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         cost_usd=cost_usd,
+        latency_ms=latency_ms,
     )
