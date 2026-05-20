@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import json
+
+import httpx
 import pytest
+import respx
 
 from mcp_financial_data.evals.metrics import (
     citation_coverage,
@@ -63,6 +67,39 @@ def test_judge_with_stub_is_pure() -> None:
 
 
 @pytest.mark.asyncio
-async def test_judge_with_claude_is_stub() -> None:
-    with pytest.raises(NotImplementedError, match=r"prompts/05_evals_full_run\.md"):
-        await judge_with_claude("c1", {}, {}, model="claude-opus-4-7-20260301")
+@respx.mock
+async def test_judge_with_claude_parses_rubric(respx_mock: respx.Router) -> None:
+    respx_mock.post("https://api.anthropic.com/v1/messages").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "id": "msg_judge",
+                "type": "message",
+                "role": "assistant",
+                "model": "claude-opus-4-7-20260301",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(
+                            {
+                                "factual_accuracy": 4,
+                                "citation_grounding": 5,
+                                "completeness": 3,
+                                "format_adherence": 5,
+                                "latency_under_budget": 2,
+                            }
+                        ),
+                    }
+                ],
+                "stop_reason": "end_turn",
+                "usage": {"input_tokens": 10, "output_tokens": 5},
+            },
+        )
+    )
+    score = await judge_with_claude(
+        "c1",
+        {"a": 1},
+        {"a": 1},
+        model="claude-opus-4-7-20260301",
+    )
+    assert score == pytest.approx(3.8 / 5.0)

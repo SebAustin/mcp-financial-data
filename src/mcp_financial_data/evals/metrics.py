@@ -30,15 +30,27 @@ class CaseMetrics:
     success: bool
 
 
-def exec_accuracy(expected: dict[str, Any], actual: dict[str, Any]) -> float:
-    """Deterministic exact-match accuracy across keys present in ``expected``.
+def _values_match(expected: Any, actual: Any) -> bool:
+    """Deep equality that ignores extra keys on dicts and list length must match."""
+    if isinstance(expected, dict) and isinstance(actual, dict):
+        return all(k in actual and _values_match(v, actual[k]) for k, v in expected.items())
+    if isinstance(expected, list) and isinstance(actual, list):
+        if len(expected) != len(actual):
+            return False
+        return all(_values_match(e, a) for e, a in zip(expected, actual, strict=True))
+    return bool(expected == actual)
 
-    A missing or unequal key counts as 0.0; nested dicts are compared by deep
-    equality. Returns 1.0 for an empty ``expected`` (vacuous truth).
+
+def exec_accuracy(expected: dict[str, Any], actual: dict[str, Any]) -> float:
+    """Deterministic match accuracy across keys present in ``expected``.
+
+    Nested dicts and lists compare only the keys/elements in ``expected`` so
+    tool models may include optional fields (e.g. ``primary_doc_description``)
+    without penalizing the score. Returns 1.0 for an empty ``expected``.
     """
     if not expected:
         return 1.0
-    matches = sum(1 for k, v in expected.items() if actual.get(k) == v)
+    matches = sum(1 for k, v in expected.items() if _values_match(v, actual.get(k)))
     return matches / len(expected)
 
 
@@ -81,11 +93,11 @@ async def judge_with_claude(
     *,
     model: str,
 ) -> float:
-    """LLM-as-judge call against Claude. Implementation in W1 follow-up.
+    """LLM-as-judge call against Claude.
 
-    See ``prompts/05_evals_full_run.md``. The CI smoke slice never reaches
-    this function because the harness short-circuits to ``judge_with_stub``
-    when ``--offline`` is set.
+    Delegates to :mod:`evals.judge`. The CI smoke slice uses ``judge_with_stub``
+    because ``--offline`` is always set in CI.
     """
-    _ = (case_id, expected, actual, model)
-    raise NotImplementedError("see prompts/05_evals_full_run.md")
+    from mcp_financial_data.evals.judge import judge_with_claude as _judge
+
+    return await _judge(case_id, expected, actual, model=model)

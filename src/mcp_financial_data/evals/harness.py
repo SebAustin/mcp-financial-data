@@ -37,13 +37,17 @@ from pathlib import Path
 from typing import Any
 
 from mcp_financial_data import __version__
+from mcp_financial_data.evals.dispatch import EvalDispatchError, dispatch_online
 from mcp_financial_data.evals.fixtures import get_offline_fixture
+from mcp_financial_data.evals.judge import JudgeScoreError, judge_with_claude
 from mcp_financial_data.evals.metrics import (
     CaseMetrics,
     citation_coverage,
     exec_accuracy,
     judge_with_stub,
 )
+from mcp_financial_data.evals.types import EvalCase
+from mcp_financial_data.extractors.tenk import ExtractorSpendCapError, get_total_spend_usd
 from mcp_financial_data.logging import configure_logging, get_logger
 from mcp_financial_data.settings import Settings, get_settings
 
@@ -51,15 +55,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CASES_PATH = REPO_ROOT / "evals" / "cases" / "seed.jsonl"
 
 
-@dataclass(frozen=True, slots=True)
-class EvalCase:
-    """One row from the seed JSONL set."""
-
-    id: str
-    tool: str
-    description: str
-    input: dict[str, Any]
-    expected: dict[str, Any]
+class EvalBudgetExceededError(Exception):
+    """Raised when ``--budget`` is exceeded before the run completes."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,12 +135,19 @@ def _load_cases(path: Path) -> list[EvalCase]:
     return cases
 
 
-async def _run_one(case: EvalCase, *, offline: bool, settings: Settings) -> CaseRow:
+async def _run_one(
+    case: EvalCase,
+    *,
+    offline: bool,
+    settings: Settings,
+    budget_usd: float | None,
+    spend_so_far_usd: float,
+) -> CaseRow:
     """Run one case and return its JSONL row.
 
     In offline mode, the harness reads a canned fixture from
-    ``mcp_financial_data.evals.fixtures``. In online mode, it would dispatch
-    to the real tool (filled in by ``prompts/05_evals_full_run.md``).
+    ``mcp_financial_data.evals.fixtures``. In online mode, it dispatches to
+    the real tool implementations in :mod:`evals.dispatch`.
     """
     log = get_logger("eval").bind(case=case.id, tool=case.tool, offline=offline)
     log.info("case.start")
@@ -154,20 +158,51 @@ async def _run_one(case: EvalCase, *, offline: bool, settings: Settings) -> Case
     cost_usd = 0.0
 
     try:
+        if budget_usd is not None and spend_so_far_usd >= budget_usd:
+            raise EvalBudgetExceededError(
+                f"--budget {budget_usd:.4f} exceeded (spent={spend_so_far_usd:.4f})"
+            )
         if offline or settings.eval_offline:
             actual = get_offline_fixture(case.id)
         else:
-            error = "online mode not yet implemented; see prompts/05_evals_full_run.md"
-            log.warning("case.online_not_implemented")
+            actual, cost_usd, _in_tok, _out_tok = await dispatch_online(case, settings=settings)
+            if budget_usd is not None and spend_so_far_usd + cost_usd > budget_usd:
+                raise EvalBudgetExceededError(
+                    f"--budget {budget_usd:.4f} would be exceeded after case {case.id}"
+                )
     except KeyError as exc:
         error = f"missing offline fixture: {exc}"
         log.error("case.fixture_missing", err=str(exc))
+    except (EvalDispatchError, TypeError, ValueError) as exc:
+        error = str(exc)
+        log.error("case.dispatch_error", err=str(exc))
+    except EvalBudgetExceededError as exc:
+        error = str(exc)
+        log.error("case.budget_exceeded", err=str(exc))
+    except ExtractorSpendCapError as exc:
+        error = str(exc)
+        log.error("case.spend_cap", err=str(exc))
+    except JudgeScoreError as exc:
+        error = str(exc)
+        log.error("case.judge_error", err=str(exc))
 
     success = error is None
     exec_acc = exec_accuracy(case.expected, actual) if success else 0.0
     cit_cov = citation_coverage(actual) if success else 0.0
-    judge = judge_with_stub(case.id, exec_acc, cit_cov) if success else 0.0
     latency_ms = (time.perf_counter() - t0) * 1000.0
+    if success and (offline or settings.eval_offline):
+        judge = judge_with_stub(case.id, exec_acc, cit_cov)
+    elif success:
+        judge = await judge_with_claude(
+            case.id,
+            case.expected,
+            actual,
+            model=settings.anthropic_model_judge,
+            settings=settings,
+            latency_ms=latency_ms,
+        )
+    else:
+        judge = 0.0
 
     metrics = CaseMetrics(
         exec_accuracy=exec_acc,
@@ -217,6 +252,7 @@ async def run(
     offline: bool,
     limit: int | None,
     settings: Settings,
+    budget_usd: float | None = None,
 ) -> RunSummary:
     """Run the eval suite. Returns the summary row that was just written."""
     log = get_logger("eval")
@@ -234,10 +270,20 @@ async def run(
     t0 = time.perf_counter()
 
     rows: list[CaseRow] = []
+    spend_usd = get_total_spend_usd()
     for case in cases:
-        row = await _run_one(case, offline=offline, settings=settings)
+        row = await _run_one(
+            case,
+            offline=offline,
+            settings=settings,
+            budget_usd=budget_usd,
+            spend_so_far_usd=spend_usd,
+        )
         _write_case_row(runs_dir, row)
         rows.append(row)
+        spend_usd += row.cost_usd
+        if row.error and "budget" in (row.error or "").lower():
+            break
 
     duration_ms = (time.perf_counter() - t0) * 1000.0
     n_pass = sum(1 for r in rows if r.success)
@@ -301,6 +347,13 @@ def _parser() -> argparse.ArgumentParser:
         default=DEFAULT_CASES_PATH,
         help=f"Path to the JSONL cases file. Default: {DEFAULT_CASES_PATH}",
     )
+    p.add_argument(
+        "--budget",
+        type=float,
+        default=None,
+        metavar="USD",
+        help="Abort the run when cumulative case cost exceeds this USD cap.",
+    )
     return p
 
 
@@ -323,6 +376,7 @@ def main(argv: list[str] | None = None) -> int:
             offline=args.offline,
             limit=args.limit,
             settings=settings,
+            budget_usd=args.budget,
         )
     )
     return 0 if summary.n_pass == summary.n_cases else 1
