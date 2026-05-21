@@ -47,12 +47,51 @@ from mcp_financial_data.evals.metrics import (
     judge_with_stub,
 )
 from mcp_financial_data.evals.types import EvalCase
-from mcp_financial_data.extractors.tenk import ExtractorSpendCapError, get_total_spend_usd
+from mcp_financial_data.extractors.tenk import (
+    ExtractorConfigError,
+    ExtractorSpendCapError,
+    get_total_spend_usd,
+)
 from mcp_financial_data.logging import configure_logging, get_logger
 from mcp_financial_data.settings import Settings, get_settings
+from mcp_financial_data.tools.edgar import EdgarConfigError
+from mcp_financial_data.tools.fred import FredConfigError
+from mcp_financial_data.tools.polygon import PolygonConfigError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CASES_PATH = REPO_ROOT / "evals" / "cases" / "seed.jsonl"
+
+
+_ONLINE_CONFIG_ERRORS = (
+    EdgarConfigError,
+    FredConfigError,
+    PolygonConfigError,
+    ExtractorConfigError,
+)
+
+
+def _online_config_errors(settings: Settings) -> list[str]:
+    """Return human-readable messages for missing live-eval credentials."""
+    errors: list[str] = []
+    ua = settings.edgar_user_agent.strip()
+    if not ua or "@" not in ua:
+        errors.append(
+            "EDGAR_USER_AGENT must be set to '<Name> <contact@example.com>' "
+            "(see .env.example and SEC Fair Access policy)"
+        )
+    if settings.fred_api_key is None:
+        errors.append("FRED_API_KEY is required for fred.* eval cases")
+    if settings.anthropic_api_key is None:
+        errors.append("ANTHROPIC_API_KEY is required for tenk.extract_section and the live judge")
+    return errors
+
+
+def _validate_online_settings(settings: Settings) -> None:
+    """Fail fast before the first live network call when secrets are missing."""
+    errors = _online_config_errors(settings)
+    if errors:
+        msg = "online eval configuration incomplete:\n" + "\n".join(f"  - {e}" for e in errors)
+        raise EvalDispatchError(msg)
 
 
 class EvalBudgetExceededError(Exception):
@@ -192,7 +231,7 @@ async def _run_one(
     except KeyError as exc:
         error = f"missing offline fixture: {exc}"
         log.error("case.fixture_missing", err=str(exc))
-    except (EvalDispatchError, TypeError, ValueError) as exc:
+    except (EvalDispatchError, TypeError, ValueError, *_ONLINE_CONFIG_ERRORS) as exc:
         error = str(exc)
         log.error("case.dispatch_error", err=str(exc))
     except EvalBudgetExceededError as exc:
@@ -417,6 +456,14 @@ def main(argv: list[str] | None = None) -> int:
     settings = get_settings()
     random.seed(settings.eval_seed)
     os.environ.setdefault("PYTHONHASHSEED", "0")
+
+    online = not args.offline and not settings.eval_offline
+    if online:
+        try:
+            _validate_online_settings(settings)
+        except EvalDispatchError as exc:
+            sys.stderr.write(f"error: {exc}\n")
+            return 2
 
     summary = asyncio.run(
         run(

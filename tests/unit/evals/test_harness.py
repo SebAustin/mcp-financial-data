@@ -16,6 +16,7 @@ import pytest
 from mcp_financial_data.evals import harness
 from mcp_financial_data.evals.harness import (
     DEFAULT_CASES_PATH,
+    EvalDispatchError,
     _git_sha,
     _load_cases,
     _make_run_id,
@@ -197,6 +198,18 @@ def test_parser_accepts_budget_and_min_judge_score() -> None:
     args = p.parse_args(["--full", "--budget", "2.50", "--min-judge-score", "0.85"])
     assert args.budget == pytest.approx(2.50)
     assert args.min_judge_score == pytest.approx(0.85)
+
+
+def test_main_fails_when_online_config_incomplete(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("EVAL_OFFLINE", "0")
+
+    def _fail_validation(_settings: object) -> None:
+        raise EvalDispatchError("online eval configuration incomplete")
+
+    monkeypatch.setattr(harness, "_validate_online_settings", _fail_validation)
+    reload_settings()
+    rc = main(["--full"])
+    assert rc == 2
 
 
 def test_main_fails_when_min_judge_score_not_met(
