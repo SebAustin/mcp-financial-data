@@ -1,0 +1,62 @@
+"""Tests for ``mcp_financial_data.evals.judge``."""
+
+from __future__ import annotations
+
+import json
+
+import httpx
+import pytest
+import respx
+
+from mcp_financial_data.evals.judge import JudgeOutcome, JudgeRubricScores, judge_with_claude
+
+ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
+
+
+def test_judge_rubric_normalized() -> None:
+    scores = JudgeRubricScores(
+        factual_accuracy=4,
+        citation_grounding=5,
+        completeness=3,
+        format_adherence=5,
+        latency_under_budget=2,
+    )
+    assert scores.normalized() == pytest.approx(3.8 / 5.0)
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_judge_with_claude_returns_outcome(respx_mock: respx.Router) -> None:
+    respx_mock.post(ANTHROPIC_MESSAGES_URL).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "id": "msg_judge",
+                "type": "message",
+                "role": "assistant",
+                "model": "claude-opus-4-7-20260301",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(
+                            {
+                                "factual_accuracy": 5,
+                                "citation_grounding": 5,
+                                "completeness": 5,
+                                "format_adherence": 5,
+                                "latency_under_budget": 5,
+                            }
+                        ),
+                    }
+                ],
+                "stop_reason": "end_turn",
+                "usage": {"input_tokens": 10, "output_tokens": 5},
+            },
+        )
+    )
+    outcome = await judge_with_claude("c1", {"a": 1}, {"a": 1}, model="claude-opus-4-7-20260301")
+    assert isinstance(outcome, JudgeOutcome)
+    assert outcome.score == 1.0
+    assert outcome.input_tokens == 10
+    assert outcome.output_tokens == 5
+    assert outcome.cost_usd > 0.0

@@ -35,10 +35,15 @@ requires:
    ``judge_score = mean(axes) / 5``.
 3. **``evals/types.py``** — Holds :class:`EvalCase` to avoid import cycles.
 4. **Harness** — ``_run_one`` calls dispatch + judge when online; ``--budget``
-   compares cumulative ``cost_usd`` (plus pre-check against extractor spend counter).
-   Aborts with :class:`EvalBudgetExceededError` and a clear row error.
-5. **Nightly** — ``eval-nightly.yml`` runs ``--full`` with ``EVAL_OFFLINE=0`` and
-   repository secrets; artifacts uploaded for trend review.
+   compares cumulative ``cost_usd`` (dispatch + judge, plus pre-check against
+   extractor spend counter). Aborts with :class:`EvalBudgetExceededError` and a
+   clear row error. Each case row records ``input_tokens``, ``output_tokens``,
+   ``judge_input_tokens``, ``judge_output_tokens``, ``dispatch_cost_usd``, and
+   ``judge_cost_usd``. The summary row records ``model_primary``,
+   ``model_judge``, and token totals.
+5. **Nightly** — ``eval-nightly.yml`` runs ``--full --budget 5
+   --min-judge-score 0.85`` with ``EVAL_OFFLINE=0`` and repository secrets;
+   artifacts uploaded for trend review. The workflow badge reflects pass/fail.
 
 ## Consequences
 

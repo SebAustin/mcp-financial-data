@@ -10,12 +10,14 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass
 from typing import Any, Final
 
 import anthropic
 from anthropic.types import TextBlock
 from pydantic import BaseModel, ConfigDict, Field
 
+from mcp_financial_data.extractors._pricing import UnknownModelPricingError, estimate_cost_usd
 from mcp_financial_data.logging import get_logger
 from mcp_financial_data.settings import Settings, get_settings
 
@@ -39,6 +41,17 @@ _JUDGE_SYSTEM: Final[str] = (
 
 class JudgeScoreError(Exception):
     """Raised when the judge model returns an unparseable response."""
+
+
+@dataclass(frozen=True, slots=True)
+class JudgeOutcome:
+    """Result of one ``judge_with_claude`` call, including token attribution."""
+
+    score: float
+    model: str
+    input_tokens: int
+    output_tokens: int
+    cost_usd: float
 
 
 class JudgeRubricScores(BaseModel):
@@ -91,17 +104,11 @@ async def judge_with_claude(
     settings: Settings | None = None,
     latency_ms: float = 0.0,
     budget_ms: float | None = None,
-) -> float:
-    """LLM-as-judge call against Claude. Returns a score in [0.0, 1.0].
+) -> JudgeOutcome:
+    """LLM-as-judge call against Claude.
 
-    Args:
-        case_id: Eval case identifier (logged only).
-        expected: Reference output from the seed JSONL row.
-        actual: Tool output produced by online or offline dispatch.
-        model: Judge model id (typically Opus 4.7).
-        settings: Optional settings override.
-        latency_ms: Wall-clock latency for the case (feeds ``latency_under_budget``).
-        budget_ms: Optional per-case latency budget in milliseconds.
+    Returns a :class:`JudgeOutcome` with normalized score, model id, token
+    counts, and USD cost computed from the pricing table.
     """
     s = settings or get_settings()
     if s.anthropic_api_key is None:
@@ -145,11 +152,31 @@ async def judge_with_claude(
     raw = _extract_json_object(text_blocks[0])
     scores = JudgeRubricScores.model_validate(raw)
     normalized = scores.normalized()
+    input_tokens = int(response.usage.input_tokens)
+    output_tokens = int(response.usage.output_tokens)
+    try:
+        cost_usd = estimate_cost_usd(
+            response.model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+    except UnknownModelPricingError as exc:
+        raise JudgeScoreError(str(exc)) from exc
+
     _log.info(
         "judge.done",
         case_id=case_id,
         model=response.model,
         judge_score=normalized,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        cost_usd=cost_usd,
         **{axis: getattr(scores, axis) for axis in RUBRIC_AXES},
     )
-    return normalized
+    return JudgeOutcome(
+        score=normalized,
+        model=response.model,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        cost_usd=cost_usd,
+    )

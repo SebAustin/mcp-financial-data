@@ -72,6 +72,12 @@ class CaseRow:
     judge_score: float
     latency_ms: float
     cost_usd: float
+    dispatch_cost_usd: float
+    judge_cost_usd: float
+    input_tokens: int
+    output_tokens: int
+    judge_input_tokens: int
+    judge_output_tokens: int
     error: str | None
     actual: dict[str, Any]
 
@@ -96,6 +102,10 @@ class RunSummary:
     mean_judge_score: float
     mean_latency_ms: float
     total_cost_usd: float
+    total_input_tokens: int
+    total_output_tokens: int
+    total_judge_input_tokens: int
+    total_judge_output_tokens: int
     host: dict[str, str]
     cases: list[str]
 
@@ -155,7 +165,13 @@ async def _run_one(
 
     actual: dict[str, Any] = {}
     error: str | None = None
+    dispatch_cost_usd = 0.0
+    judge_cost_usd = 0.0
     cost_usd = 0.0
+    input_tokens = 0
+    output_tokens = 0
+    judge_input_tokens = 0
+    judge_output_tokens = 0
 
     try:
         if budget_usd is not None and spend_so_far_usd >= budget_usd:
@@ -165,10 +181,13 @@ async def _run_one(
         if offline or settings.eval_offline:
             actual = get_offline_fixture(case.id)
         else:
-            actual, cost_usd, _in_tok, _out_tok = await dispatch_online(case, settings=settings)
+            actual, dispatch_cost_usd, input_tokens, output_tokens = await dispatch_online(
+                case, settings=settings
+            )
+            cost_usd = dispatch_cost_usd
             if budget_usd is not None and spend_so_far_usd + cost_usd > budget_usd:
                 raise EvalBudgetExceededError(
-                    f"--budget {budget_usd:.4f} would be exceeded after case {case.id}"
+                    f"--budget {budget_usd:.4f} would be exceeded after dispatch for {case.id}"
                 )
     except KeyError as exc:
         error = f"missing offline fixture: {exc}"
@@ -193,7 +212,7 @@ async def _run_one(
     if success and (offline or settings.eval_offline):
         judge = judge_with_stub(case.id, exec_acc, cit_cov)
     elif success:
-        judge = await judge_with_claude(
+        outcome = await judge_with_claude(
             case.id,
             case.expected,
             actual,
@@ -201,6 +220,19 @@ async def _run_one(
             settings=settings,
             latency_ms=latency_ms,
         )
+        judge = outcome.score
+        judge_input_tokens = outcome.input_tokens
+        judge_output_tokens = outcome.output_tokens
+        judge_cost_usd = outcome.cost_usd
+        cost_usd = dispatch_cost_usd + judge_cost_usd
+        if budget_usd is not None and spend_so_far_usd + cost_usd > budget_usd:
+            success = False
+            error = (
+                f"--budget {budget_usd:.4f} would be exceeded after judge for {case.id} "
+                f"(spent={spend_so_far_usd:.4f}, case_cost={cost_usd:.4f})"
+            )
+            log.error("case.budget_exceeded", err=error)
+            judge = 0.0
     else:
         judge = 0.0
 
@@ -224,6 +256,12 @@ async def _run_one(
         judge_score=judge,
         latency_ms=latency_ms,
         cost_usd=cost_usd,
+        dispatch_cost_usd=dispatch_cost_usd,
+        judge_cost_usd=judge_cost_usd,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        judge_input_tokens=judge_input_tokens,
+        judge_output_tokens=judge_output_tokens,
         error=error,
         actual=actual,
     )
@@ -304,6 +342,10 @@ async def run(
         mean_judge_score=_mean(r.judge_score for r in rows),
         mean_latency_ms=_mean(r.latency_ms for r in rows),
         total_cost_usd=sum(r.cost_usd for r in rows),
+        total_input_tokens=sum(r.input_tokens for r in rows),
+        total_output_tokens=sum(r.output_tokens for r in rows),
+        total_judge_input_tokens=sum(r.judge_input_tokens for r in rows),
+        total_judge_output_tokens=sum(r.judge_output_tokens for r in rows),
         host={
             "python": platform.python_version(),
             "system": platform.system(),
@@ -354,6 +396,13 @@ def _parser() -> argparse.ArgumentParser:
         metavar="USD",
         help="Abort the run when cumulative case cost exceeds this USD cap.",
     )
+    p.add_argument(
+        "--min-judge-score",
+        type=float,
+        default=None,
+        metavar="SCORE",
+        help="Fail the run when mean_judge_score is below this threshold (0.0-1.0).",
+    )
     return p
 
 
@@ -379,7 +428,15 @@ def main(argv: list[str] | None = None) -> int:
             budget_usd=args.budget,
         )
     )
-    return 0 if summary.n_pass == summary.n_cases else 1
+    if summary.n_pass != summary.n_cases:
+        return 1
+    if args.min_judge_score is not None and summary.mean_judge_score < args.min_judge_score:
+        sys.stderr.write(
+            f"error: mean_judge_score {summary.mean_judge_score:.4f} "
+            f"< --min-judge-score {args.min_judge_score:.4f}\n"
+        )
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

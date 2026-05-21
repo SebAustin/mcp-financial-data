@@ -174,6 +174,7 @@ async def test_run_writes_summary_and_per_case_jsonl(
     summary_data = json.loads((runs_root / "summary.json").read_text(encoding="utf-8"))
     assert summary_data["n_pass"] == 1
     assert summary_data["mean_judge_score"] == 1.0
+    assert summary_data["total_judge_input_tokens"] == 0
 
 
 def test_parser_requires_one_of_smoke_full_limit() -> None:
@@ -189,6 +190,29 @@ def test_parser_accepts_smoke_offline() -> None:
     assert args.smoke is True
     assert args.offline is True
     assert args.full is False
+
+
+def test_parser_accepts_budget_and_min_judge_score() -> None:
+    p = _parser()
+    args = p.parse_args(["--full", "--budget", "2.50", "--min-judge-score", "0.85"])
+    assert args.budget == pytest.approx(2.50)
+    assert args.min_judge_score == pytest.approx(0.85)
+
+
+def test_main_fails_when_min_judge_score_not_met(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(harness, "REPO_ROOT", tmp_path)
+    monkeypatch.setenv("EVAL_RUNS_DIR", "runs")
+    cases_path = tmp_path / "seed.jsonl"
+    cases_path.write_text(DEFAULT_CASES_PATH.read_text(encoding="utf-8"), encoding="utf-8")
+    monkeypatch.setattr(
+        harness,
+        "DEFAULT_CASES_PATH",
+        cases_path,
+    )
+    rc = main(["--smoke", "--offline", "--min-judge-score", "1.01", "--cases", str(cases_path)])
+    assert rc == 1
 
 
 # ``main(...)`` with --smoke is exercised end-to-end through the
