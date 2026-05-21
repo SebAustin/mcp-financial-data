@@ -72,7 +72,7 @@ make serve             # run the MCP server on $MCP_HOST:$MCP_PORT
 
 The eval harness writes per-case JSONL plus a summary JSON to
 `evals/runs/<run_id>/`. CI runs `--smoke --offline` on every PR; nightly
-CI runs `--full` against live APIs with a $5 spend cap.
+CI runs `--full --budget 5 --min-judge-score 0.85` against live APIs.
 
 | Metric | W1 target | Source of truth | Notes |
 | --- | --- | --- | --- |
@@ -80,9 +80,35 @@ CI runs `--full` against live APIs with a $5 spend cap.
 | Mean exec-accuracy | ≥ 0.95 | `evals/metrics.py::exec_accuracy` | Deterministic. |
 | Mean citation coverage | = 1.00 (extractor) | `evals/metrics.py::citation_coverage` | Required for `tenk.*`. |
 | Mean judge score (offline) | ≥ 0.90 | `evals/metrics.py::judge_with_stub` | 0.5·exec + 0.5·citation. |
+| Mean judge score (live full) | ≥ 0.85 | `evals/judge.py::judge_with_claude` | Opus 4.7 five-axis rubric. |
 | P50 latency (smoke) | ≤ 50 ms | harness `latency_ms` | Offline only. |
 | Total cost / smoke run | $0.00 | harness `total_cost_usd` | `--offline` enforced. |
+| Total cost / live full run | ≤ $5.00 | harness `total_cost_usd` | `--budget 5` gate. |
 | Coverage gate (src/) | ≥ 85% | `pytest --cov-fail-under=85` | mypy `--strict` also gates. |
+
+### Latest `--full` results (git `b8a4ba3`, 2026-05-21)
+
+Reproduce offline:
+
+```bash
+uv run python -m mcp_financial_data.evals.harness --full --offline
+```
+
+Reproduce live (requires `.env` secrets; ~$0.08 per run):
+
+```bash
+uv run python -m mcp_financial_data.evals.harness --full --budget 5 --min-judge-score 0.85
+```
+
+| Run | `run_id` | Pass | mean exec-acc | mean citation | mean judge | cost USD |
+| --- | --- | --- | --- | --- | --- | --- |
+| Offline full | `20260521T114816Z_b8a4ba3` | 5 / 5 | 1.00 | 1.00 | 1.00 | 0.00 |
+| Live full | `20260521T114826Z_b8a4ba3` | 5 / 5 | 0.80 | 1.00 | 0.93 | 0.08 |
+
+Live `mean_exec_accuracy` is below 1.0 because `edgar.company_facts` can return
+multiple FY rows for the same concept; deterministic scoring requires an exact
+list match. The Opus judge still validates factual alignment on the filtered
+subset (see ADR 0009).
 
 ## Hard constraints (skim before contributing)
 

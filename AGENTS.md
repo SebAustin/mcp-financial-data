@@ -34,6 +34,7 @@ Citadel / Anthropic Finance teams.
 - `make ci` exits 0 (lint + typecheck + test ≥85% + smoke eval).
 - A 60-second Loom demo of: OAuth round-trip → MCP tool call → 10-K extract
   with visible citation pills → MCP Apps inline UI rendering.
-- README.md eval table populated with real numbers from a `--full` run.
+- README.md eval table populated with real numbers from offline and live
+  `--full` runs (see **Latest `--full` results**).
 - Tag `v0.1.0`, three GitHub issues filed for follow-on work, applications
   to Anthropic FDE + Cursor FDE sent.
