@@ -49,6 +49,7 @@ from mcp_financial_data.evals.metrics import (
     judge_with_stub,
 )
 from mcp_financial_data.evals.types import EvalCase
+from mcp_financial_data.extractors._pricing import UnknownModelPricingError
 from mcp_financial_data.extractors.tenk import (
     ExtractorConfigError,
     ExtractorSpendCapError,
@@ -230,6 +231,9 @@ async def _run_one(
                 raise EvalBudgetExceededError(
                     f"--budget {budget_usd:.4f} would be exceeded after dispatch for {case.id}"
                 )
+    except UnknownModelPricingError as exc:
+        error = str(exc)
+        log.error("case.pricing_error", err=str(exc))
     except KeyError as exc:
         error = f"missing offline fixture: {exc}"
         log.error("case.fixture_missing", err=str(exc))

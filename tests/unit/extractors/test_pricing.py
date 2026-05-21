@@ -54,3 +54,17 @@ def test_resolve_api_model_id_maps_portfolio_fixture_ids() -> None:
 
     assert resolve_api_model_id("claude-opus-4-7-20260301") == "claude-opus-4-7"
     assert get_model_pricing("claude-opus-4-7").input_per_mtok == 15.00
+
+
+@pytest.mark.parametrize(
+    "model_id",
+    [
+        "claude-sonnet-4-5-20250929",
+        "claude-sonnet-4-6",
+        "claude-opus-4-7-20251101",
+    ],
+)
+def test_snapshot_model_ids_resolve_to_pricing(model_id: str) -> None:
+    pricing = get_model_pricing(model_id)
+    assert pricing.input_per_mtok in {3.00, 15.00}
+    assert pricing.output_per_mtok in {15.00, 75.00}

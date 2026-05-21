@@ -93,10 +93,10 @@ async def test_run_one_offline_happy_path() -> None:
             "filings": [
                 {
                     "cik": "0000320193",
-                    "accession_number": "0000320193-25-000001",
+                    "accession_number": "0000320193-25-000079",
                     "form": "10-K",
-                    "filing_date": "2025-11-01",
-                    "primary_document": "aapl-10k.htm",
+                    "filing_date": "2025-10-31",
+                    "primary_document": "aapl-20250927.htm",
                 }
             ]
         },

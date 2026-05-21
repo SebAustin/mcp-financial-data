@@ -35,6 +35,8 @@ RUBRIC_AXES: Final[tuple[str, ...]] = (
     "latency_under_budget",
 )
 
+_JUDGE_MAX_JSON_CHARS: Final[int] = 120_000
+
 _JUDGE_SYSTEM: Final[str] = (
     "You are an eval judge for a financial MCP server. Score the ACTUAL tool "
     "output against EXPECTED reference data on five axes from 0 to 5 "
@@ -79,6 +81,48 @@ class JudgeRubricScores(BaseModel):
             + self.latency_under_budget
         )
         return round(total / (len(RUBRIC_AXES) * 5.0), 4)
+
+
+def compact_for_judge(actual: dict[str, Any], expected: dict[str, Any]) -> dict[str, Any]:
+    """Shrink large tool payloads before the Opus judge call."""
+    compact: dict[str, Any] = dict(actual)
+    facts = compact.get("xbrl_facts")
+    if isinstance(facts, list):
+        expected_rows = expected.get("xbrl_facts")
+        if isinstance(expected_rows, list) and expected_rows:
+            concepts = {
+                str(row["concept"])
+                for row in expected_rows
+                if isinstance(row, dict) and row.get("concept") is not None
+            }
+            fiscal_years = {
+                int(row["fiscal_year"])
+                for row in expected_rows
+                if isinstance(row, dict) and row.get("fiscal_year") is not None
+            }
+            filtered = facts
+            if concepts:
+                filtered = [
+                    row
+                    for row in filtered
+                    if isinstance(row, dict) and row.get("concept") in concepts
+                ]
+            if fiscal_years:
+                filtered = [
+                    row
+                    for row in filtered
+                    if isinstance(row, dict) and row.get("fiscal_year") in fiscal_years
+                ]
+            compact["xbrl_facts"] = filtered[:50]
+        elif len(facts) > 50:
+            compact["xbrl_facts"] = facts[:50]
+            compact["_truncated"] = True
+    if len(json.dumps(compact, sort_keys=True)) > _JUDGE_MAX_JSON_CHARS:
+        for key, value in list(compact.items()):
+            if isinstance(value, list) and len(value) > 20:
+                compact[key] = value[:20]
+        compact["_truncated"] = True
+    return compact
 
 
 def _extract_json_object(text: str) -> dict[str, Any]:
@@ -126,7 +170,7 @@ async def judge_with_claude(
     user_payload = {
         "case_id": case_id,
         "expected": expected,
-        "actual": actual,
+        "actual": compact_for_judge(actual, expected),
         "latency": latency_hint,
         "rubric_axes": list(RUBRIC_AXES),
     }

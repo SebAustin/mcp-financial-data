@@ -12,10 +12,24 @@ from mcp_financial_data.evals.judge import (
     JudgeOutcome,
     JudgeRubricScores,
     JudgeScoreError,
+    compact_for_judge,
     judge_with_claude,
 )
 
 ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
+
+
+def test_compact_for_judge_filters_xbrl_facts() -> None:
+    actual = {
+        "xbrl_facts": [
+            {"concept": "Revenues", "fiscal_year": 2025, "value": 1.0},
+            {"concept": "Assets", "fiscal_year": 2025, "value": 2.0},
+        ]
+    }
+    expected = {"xbrl_facts": [{"concept": "Revenues", "fiscal_year": 2025}]}
+    compact = compact_for_judge(actual, expected)
+    assert len(compact["xbrl_facts"]) == 1
+    assert compact["xbrl_facts"][0]["concept"] == "Revenues"
 
 
 def test_judge_rubric_normalized() -> None:

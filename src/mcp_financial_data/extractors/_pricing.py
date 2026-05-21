@@ -71,9 +71,18 @@ _PORTFOLIO_MODEL_ALIASES: Final[dict[str, str]] = {
 _PRICE_TABLE: Final[dict[str, ModelPricing]] = {
     "claude-sonnet-4-5-20260301": _SONNET_45,
     "claude-sonnet-4-5": _SONNET_45,
+    "claude-sonnet-4-6": _SONNET_45,
     "claude-opus-4-7-20260301": _OPUS_47,
     "claude-opus-4-7": _OPUS_47,
 }
+
+# Anthropic returns dated snapshot ids (``claude-sonnet-4-5-20250929``). Match
+# longest prefix first so ``claude-sonnet-4-5`` does not swallow ``4-6``.
+_PRICING_PREFIXES: Final[tuple[tuple[str, ModelPricing], ...]] = (
+    ("claude-opus-4-7", _OPUS_47),
+    ("claude-sonnet-4-6", _SONNET_45),
+    ("claude-sonnet-4-5", _SONNET_45),
+)
 
 
 def resolve_api_model_id(model_id: str) -> str:
@@ -86,6 +95,10 @@ def get_model_pricing(model_id: str) -> ModelPricing:
     for candidate in (model_id, resolve_api_model_id(model_id)):
         if candidate in _PRICE_TABLE:
             return _PRICE_TABLE[candidate]
+    normalized = resolve_api_model_id(model_id)
+    for prefix, pricing in _PRICING_PREFIXES:
+        if normalized == prefix or normalized.startswith(f"{prefix}-"):
+            return pricing
     raise UnknownModelPricingError(
         f"No pricing row for model_id={model_id!r}; "
         f"add one to extractors/_pricing.py (table v{PRICE_TABLE_VERSION})."
