@@ -100,4 +100,5 @@ async def judge_with_claude(
     """
     from mcp_financial_data.evals.judge import judge_with_claude as _judge
 
-    return await _judge(case_id, expected, actual, model=model)
+    outcome = await _judge(case_id, expected, actual, model=model)
+    return outcome.score

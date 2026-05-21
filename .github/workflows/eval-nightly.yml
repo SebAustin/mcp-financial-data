@@ -36,7 +36,7 @@ jobs:
           POLYGON_API_KEY: ${{ secrets.POLYGON_API_KEY }}
           EDGAR_USER_AGENT: ${{ secrets.EDGAR_USER_AGENT }}
           MAX_API_SPEND_USD: "5"
-        run: uv run python -m mcp_financial_data.evals.harness --full
+        run: uv run python -m mcp_financial_data.evals.harness --full --budget 5 --min-judge-score 0.85
       - name: Upload eval artifacts
         if: always()
         uses: actions/upload-artifact@v7

@@ -16,6 +16,7 @@ import pytest
 from mcp_financial_data.evals import harness
 from mcp_financial_data.evals.harness import (
     DEFAULT_CASES_PATH,
+    EvalDispatchError,
     _git_sha,
     _load_cases,
     _make_run_id,
@@ -92,10 +93,10 @@ async def test_run_one_offline_happy_path() -> None:
             "filings": [
                 {
                     "cik": "0000320193",
-                    "accession_number": "0000320193-25-000001",
+                    "accession_number": "0000320193-25-000079",
                     "form": "10-K",
-                    "filing_date": "2025-11-01",
-                    "primary_document": "aapl-10k.htm",
+                    "filing_date": "2025-10-31",
+                    "primary_document": "aapl-20250927.htm",
                 }
             ]
         },
@@ -174,6 +175,7 @@ async def test_run_writes_summary_and_per_case_jsonl(
     summary_data = json.loads((runs_root / "summary.json").read_text(encoding="utf-8"))
     assert summary_data["n_pass"] == 1
     assert summary_data["mean_judge_score"] == 1.0
+    assert summary_data["total_judge_input_tokens"] == 0
 
 
 def test_parser_requires_one_of_smoke_full_limit() -> None:
@@ -189,6 +191,41 @@ def test_parser_accepts_smoke_offline() -> None:
     assert args.smoke is True
     assert args.offline is True
     assert args.full is False
+
+
+def test_parser_accepts_budget_and_min_judge_score() -> None:
+    p = _parser()
+    args = p.parse_args(["--full", "--budget", "2.50", "--min-judge-score", "0.85"])
+    assert args.budget == pytest.approx(2.50)
+    assert args.min_judge_score == pytest.approx(0.85)
+
+
+def test_main_fails_when_online_config_incomplete(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("EVAL_OFFLINE", "0")
+
+    def _fail_validation(_settings: object) -> None:
+        raise EvalDispatchError("online eval configuration incomplete")
+
+    monkeypatch.setattr(harness, "_validate_online_settings", _fail_validation)
+    reload_settings()
+    rc = main(["--full"])
+    assert rc == 2
+
+
+def test_main_fails_when_min_judge_score_not_met(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(harness, "REPO_ROOT", tmp_path)
+    monkeypatch.setenv("EVAL_RUNS_DIR", "runs")
+    cases_path = tmp_path / "seed.jsonl"
+    cases_path.write_text(DEFAULT_CASES_PATH.read_text(encoding="utf-8"), encoding="utf-8")
+    monkeypatch.setattr(
+        harness,
+        "DEFAULT_CASES_PATH",
+        cases_path,
+    )
+    rc = main(["--smoke", "--offline", "--min-judge-score", "1.01", "--cases", str(cases_path)])
+    assert rc == 1
 
 
 # ``main(...)`` with --smoke is exercised end-to-end through the

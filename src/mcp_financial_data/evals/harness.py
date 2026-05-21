@@ -36,6 +36,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import anthropic
+
 from mcp_financial_data import __version__
 from mcp_financial_data.evals.dispatch import EvalDispatchError, dispatch_online
 from mcp_financial_data.evals.fixtures import get_offline_fixture
@@ -47,12 +49,52 @@ from mcp_financial_data.evals.metrics import (
     judge_with_stub,
 )
 from mcp_financial_data.evals.types import EvalCase
-from mcp_financial_data.extractors.tenk import ExtractorSpendCapError, get_total_spend_usd
+from mcp_financial_data.extractors._pricing import UnknownModelPricingError
+from mcp_financial_data.extractors.tenk import (
+    ExtractorConfigError,
+    ExtractorSpendCapError,
+    get_total_spend_usd,
+)
 from mcp_financial_data.logging import configure_logging, get_logger
 from mcp_financial_data.settings import Settings, get_settings
+from mcp_financial_data.tools.edgar import EdgarConfigError
+from mcp_financial_data.tools.fred import FredConfigError
+from mcp_financial_data.tools.polygon import PolygonConfigError
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_CASES_PATH = REPO_ROOT / "evals" / "cases" / "seed.jsonl"
+
+
+_ONLINE_CONFIG_ERRORS = (
+    EdgarConfigError,
+    FredConfigError,
+    PolygonConfigError,
+    ExtractorConfigError,
+)
+
+
+def _online_config_errors(settings: Settings) -> list[str]:
+    """Return human-readable messages for missing live-eval credentials."""
+    errors: list[str] = []
+    ua = settings.edgar_user_agent.strip()
+    if not ua or "@" not in ua:
+        errors.append(
+            "EDGAR_USER_AGENT must be set to '<Name> <contact@example.com>' "
+            "(see .env.example and SEC Fair Access policy)"
+        )
+    if settings.fred_api_key is None:
+        errors.append("FRED_API_KEY is required for fred.* eval cases")
+    if settings.anthropic_api_key is None:
+        errors.append("ANTHROPIC_API_KEY is required for tenk.extract_section and the live judge")
+    return errors
+
+
+def _validate_online_settings(settings: Settings) -> None:
+    """Fail fast before the first live network call when secrets are missing."""
+    errors = _online_config_errors(settings)
+    if errors:
+        msg = "online eval configuration incomplete:\n" + "\n".join(f"  - {e}" for e in errors)
+        raise EvalDispatchError(msg)
 
 
 class EvalBudgetExceededError(Exception):
@@ -72,6 +114,12 @@ class CaseRow:
     judge_score: float
     latency_ms: float
     cost_usd: float
+    dispatch_cost_usd: float
+    judge_cost_usd: float
+    input_tokens: int
+    output_tokens: int
+    judge_input_tokens: int
+    judge_output_tokens: int
     error: str | None
     actual: dict[str, Any]
 
@@ -96,6 +144,10 @@ class RunSummary:
     mean_judge_score: float
     mean_latency_ms: float
     total_cost_usd: float
+    total_input_tokens: int
+    total_output_tokens: int
+    total_judge_input_tokens: int
+    total_judge_output_tokens: int
     host: dict[str, str]
     cases: list[str]
 
@@ -155,7 +207,13 @@ async def _run_one(
 
     actual: dict[str, Any] = {}
     error: str | None = None
+    dispatch_cost_usd = 0.0
+    judge_cost_usd = 0.0
     cost_usd = 0.0
+    input_tokens = 0
+    output_tokens = 0
+    judge_input_tokens = 0
+    judge_output_tokens = 0
 
     try:
         if budget_usd is not None and spend_so_far_usd >= budget_usd:
@@ -165,15 +223,21 @@ async def _run_one(
         if offline or settings.eval_offline:
             actual = get_offline_fixture(case.id)
         else:
-            actual, cost_usd, _in_tok, _out_tok = await dispatch_online(case, settings=settings)
+            actual, dispatch_cost_usd, input_tokens, output_tokens = await dispatch_online(
+                case, settings=settings
+            )
+            cost_usd = dispatch_cost_usd
             if budget_usd is not None and spend_so_far_usd + cost_usd > budget_usd:
                 raise EvalBudgetExceededError(
-                    f"--budget {budget_usd:.4f} would be exceeded after case {case.id}"
+                    f"--budget {budget_usd:.4f} would be exceeded after dispatch for {case.id}"
                 )
+    except UnknownModelPricingError as exc:
+        error = str(exc)
+        log.error("case.pricing_error", err=str(exc))
     except KeyError as exc:
         error = f"missing offline fixture: {exc}"
         log.error("case.fixture_missing", err=str(exc))
-    except (EvalDispatchError, TypeError, ValueError) as exc:
+    except (EvalDispatchError, TypeError, ValueError, *_ONLINE_CONFIG_ERRORS) as exc:
         error = str(exc)
         log.error("case.dispatch_error", err=str(exc))
     except EvalBudgetExceededError as exc:
@@ -182,6 +246,9 @@ async def _run_one(
     except ExtractorSpendCapError as exc:
         error = str(exc)
         log.error("case.spend_cap", err=str(exc))
+    except anthropic.APIError as exc:
+        error = str(exc)
+        log.error("case.api_error", err=str(exc))
     except JudgeScoreError as exc:
         error = str(exc)
         log.error("case.judge_error", err=str(exc))
@@ -193,14 +260,33 @@ async def _run_one(
     if success and (offline or settings.eval_offline):
         judge = judge_with_stub(case.id, exec_acc, cit_cov)
     elif success:
-        judge = await judge_with_claude(
-            case.id,
-            case.expected,
-            actual,
-            model=settings.anthropic_model_judge,
-            settings=settings,
-            latency_ms=latency_ms,
-        )
+        try:
+            outcome = await judge_with_claude(
+                case.id,
+                case.expected,
+                actual,
+                model=settings.anthropic_model_judge,
+                settings=settings,
+                latency_ms=latency_ms,
+            )
+            judge = outcome.score
+            judge_input_tokens = outcome.input_tokens
+            judge_output_tokens = outcome.output_tokens
+            judge_cost_usd = outcome.cost_usd
+            cost_usd = dispatch_cost_usd + judge_cost_usd
+            if budget_usd is not None and spend_so_far_usd + cost_usd > budget_usd:
+                success = False
+                error = (
+                    f"--budget {budget_usd:.4f} would be exceeded after judge for {case.id} "
+                    f"(spent={spend_so_far_usd:.4f}, case_cost={cost_usd:.4f})"
+                )
+                log.error("case.budget_exceeded", err=error)
+                judge = 0.0
+        except JudgeScoreError as exc:
+            success = False
+            error = str(exc)
+            log.error("case.judge_error", err=str(exc))
+            judge = 0.0
     else:
         judge = 0.0
 
@@ -224,6 +310,12 @@ async def _run_one(
         judge_score=judge,
         latency_ms=latency_ms,
         cost_usd=cost_usd,
+        dispatch_cost_usd=dispatch_cost_usd,
+        judge_cost_usd=judge_cost_usd,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        judge_input_tokens=judge_input_tokens,
+        judge_output_tokens=judge_output_tokens,
         error=error,
         actual=actual,
     )
@@ -304,6 +396,10 @@ async def run(
         mean_judge_score=_mean(r.judge_score for r in rows),
         mean_latency_ms=_mean(r.latency_ms for r in rows),
         total_cost_usd=sum(r.cost_usd for r in rows),
+        total_input_tokens=sum(r.input_tokens for r in rows),
+        total_output_tokens=sum(r.output_tokens for r in rows),
+        total_judge_input_tokens=sum(r.judge_input_tokens for r in rows),
+        total_judge_output_tokens=sum(r.judge_output_tokens for r in rows),
         host={
             "python": platform.python_version(),
             "system": platform.system(),
@@ -354,6 +450,13 @@ def _parser() -> argparse.ArgumentParser:
         metavar="USD",
         help="Abort the run when cumulative case cost exceeds this USD cap.",
     )
+    p.add_argument(
+        "--min-judge-score",
+        type=float,
+        default=None,
+        metavar="SCORE",
+        help="Fail the run when mean_judge_score is below this threshold (0.0-1.0).",
+    )
     return p
 
 
@@ -369,6 +472,14 @@ def main(argv: list[str] | None = None) -> int:
     random.seed(settings.eval_seed)
     os.environ.setdefault("PYTHONHASHSEED", "0")
 
+    online = not args.offline and not settings.eval_offline
+    if online:
+        try:
+            _validate_online_settings(settings)
+        except EvalDispatchError as exc:
+            sys.stderr.write(f"error: {exc}\n")
+            return 2
+
     summary = asyncio.run(
         run(
             cases_path=args.cases,
@@ -379,7 +490,15 @@ def main(argv: list[str] | None = None) -> int:
             budget_usd=args.budget,
         )
     )
-    return 0 if summary.n_pass == summary.n_cases else 1
+    if summary.n_pass != summary.n_cases:
+        return 1
+    if args.min_judge_score is not None and summary.mean_judge_score < args.min_judge_score:
+        sys.stderr.write(
+            f"error: mean_judge_score {summary.mean_judge_score:.4f} "
+            f"< --min-judge-score {args.min_judge_score:.4f}\n"
+        )
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

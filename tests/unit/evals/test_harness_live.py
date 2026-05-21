@@ -115,6 +115,10 @@ async def test_run_one_online_edgar_list_filings(
     assert row.success is True
     assert row.exec_accuracy == 1.0
     assert row.judge_score == 1.0
+    assert row.judge_input_tokens == 100
+    assert row.judge_output_tokens == 50
+    assert row.judge_cost_usd > 0.0
+    assert row.cost_usd == row.judge_cost_usd
     assert row.actual["filings"][0]["form"] == "10-K"
 
 
@@ -139,3 +143,114 @@ async def test_run_one_budget_abort_before_dispatch(respx_mock: respx.Router) ->
     assert row.success is False
     assert "budget" in (row.error or "").lower()
     assert respx_mock.calls.call_count == 0
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_run_one_budget_exceeded_after_dispatch(
+    monkeypatch: pytest.MonkeyPatch,
+    online_settings: Settings,
+) -> None:
+    settings = online_settings
+
+    async def _expensive_dispatch(
+        case: EvalCase, *, settings: Settings
+    ) -> tuple[dict[str, object], float, int, int]:
+        _ = (case, settings)
+        return ({"filings": []}, 3.0, 0, 0)
+
+    monkeypatch.setattr(
+        "mcp_financial_data.evals.harness.dispatch_online",
+        _expensive_dispatch,
+    )
+
+    case = EvalCase(
+        id="edgar-aapl-list-10k-2025",
+        tool="edgar.list_filings",
+        description="budget after dispatch",
+        input={"cik": "0000320193", "form": "10-K", "limit": 1},
+        expected={"filings": []},
+    )
+    row = await _run_one(
+        case,
+        offline=False,
+        settings=settings,
+        budget_usd=2.50,
+        spend_so_far_usd=0.0,
+    )
+    assert row.success is False
+    assert "budget" in (row.error or "").lower()
+    assert "dispatch" in (row.error or "").lower()
+    assert row.dispatch_cost_usd == 3.0
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_run_one_budget_exceeded_after_judge(
+    monkeypatch: pytest.MonkeyPatch,
+    respx_mock: respx.Router,
+    online_settings: Settings,
+) -> None:
+    from mcp_financial_data.evals.judge import JudgeOutcome
+
+    settings = online_settings
+    respx_mock.get(EDGAR_SUBMISSIONS).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "filings": {
+                    "recent": {
+                        "accessionNumber": ["0000320193-25-000001"],
+                        "filingDate": ["2025-11-01"],
+                        "form": ["10-K"],
+                        "primaryDocument": ["aapl-10k.htm"],
+                        "primaryDocDescription": [""],
+                    }
+                }
+            },
+        )
+    )
+
+    async def _expensive_judge(*args: object, **kwargs: object) -> JudgeOutcome:
+        _ = (args, kwargs)
+        return JudgeOutcome(
+            score=1.0,
+            model="claude-opus-4-7-20260301",
+            input_tokens=1000,
+            output_tokens=1000,
+            cost_usd=3.0,
+        )
+
+    monkeypatch.setattr(
+        "mcp_financial_data.evals.harness.judge_with_claude",
+        _expensive_judge,
+    )
+
+    case = EvalCase(
+        id="edgar-aapl-list-10k-2025",
+        tool="edgar.list_filings",
+        description="budget after judge",
+        input={"cik": "0000320193", "form": "10-K", "limit": 1},
+        expected={
+            "filings": [
+                {
+                    "cik": "0000320193",
+                    "accession_number": "0000320193-25-000001",
+                    "form": "10-K",
+                    "filing_date": "2025-11-01",
+                    "primary_document": "aapl-10k.htm",
+                }
+            ]
+        },
+    )
+    row = await _run_one(
+        case,
+        offline=False,
+        settings=settings,
+        budget_usd=2.50,
+        spend_so_far_usd=0.0,
+    )
+    assert row.success is False
+    assert "budget" in (row.error or "").lower()
+    assert "judge" in (row.error or "").lower()
+    assert row.judge_cost_usd == 3.0

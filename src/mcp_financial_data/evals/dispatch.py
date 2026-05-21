@@ -13,7 +13,7 @@ from typing import Any, cast
 from mcp_financial_data.evals.types import EvalCase
 from mcp_financial_data.extractors.tenk import TenKSection, extract_tenk_section
 from mcp_financial_data.settings import Settings
-from mcp_financial_data.tools.edgar import fetch_company_facts, list_filings
+from mcp_financial_data.tools.edgar import EdgarFact, fetch_company_facts, list_filings
 from mcp_financial_data.tools.fred import fetch_series
 from mcp_financial_data.tools.polygon import Timespan, fetch_aggregates
 
@@ -26,6 +26,32 @@ def _parse_date(value: str | None) -> date | None:
     if value is None:
         return None
     return date.fromisoformat(value)
+
+
+def _filter_xbrl_facts_for_eval(
+    facts: list[EdgarFact], expected: dict[str, Any]
+) -> list[EdgarFact]:
+    """Keep only facts relevant to the seed case so the judge stays in context."""
+    rows = expected.get("xbrl_facts")
+    if not isinstance(rows, list) or not rows:
+        return facts[:50]
+    concepts: set[str] = set()
+    fiscal_years: set[int] = set()
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        concept = row.get("concept")
+        if concept is not None:
+            concepts.add(str(concept))
+        fiscal_year = row.get("fiscal_year")
+        if fiscal_year is not None:
+            fiscal_years.add(int(fiscal_year))
+    filtered = facts
+    if concepts:
+        filtered = [fact for fact in filtered if fact.concept in concepts]
+    if fiscal_years:
+        filtered = [fact for fact in filtered if fact.fiscal_year in fiscal_years]
+    return filtered[:50]
 
 
 async def dispatch_online(
@@ -55,8 +81,9 @@ async def dispatch_online(
 
     if tool == "edgar.company_facts":
         facts = await fetch_company_facts(str(inp["cik"]))
+        filtered = _filter_xbrl_facts_for_eval(facts, case.expected)
         return (
-            {"xbrl_facts": [f.model_dump(mode="json") for f in facts]},
+            {"xbrl_facts": [f.model_dump(mode="json") for f in filtered]},
             0.0,
             0,
             0,

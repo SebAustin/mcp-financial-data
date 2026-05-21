@@ -15,10 +15,10 @@ OFFLINE_FIXTURES: dict[str, dict[str, Any]] = {
         "filings": [
             {
                 "cik": "0000320193",
-                "accession_number": "0000320193-25-000001",
+                "accession_number": "0000320193-25-000079",
                 "form": "10-K",
-                "filing_date": "2025-11-01",
-                "primary_document": "aapl-10k.htm",
+                "filing_date": "2025-10-31",
+                "primary_document": "aapl-20250927.htm",
             }
         ],
     },
@@ -26,13 +26,13 @@ OFFLINE_FIXTURES: dict[str, dict[str, Any]] = {
         "xbrl_facts": [
             {
                 "cik": "0000789019",
-                "concept": "Revenues",
+                "concept": "RevenueFromContractWithCustomerExcludingAssessedTax",
                 "unit": "USD",
-                "value": 270_000_000_000.0,
+                "value": 281_724_000_000.0,
                 "fiscal_year": 2025,
                 "fiscal_period": "FY",
                 "end_date": "2025-06-30",
-                "accession_number": "0000789019-25-000010",
+                "accession_number": "0000950170-25-100235",
             }
         ],
     },
@@ -40,10 +40,10 @@ OFFLINE_FIXTURES: dict[str, dict[str, Any]] = {
         "filings": [
             {
                 "cik": "0001652044",
-                "accession_number": "0001652044-25-000045",
+                "accession_number": "0001193125-26-216986",
                 "form": "8-K",
-                "filing_date": "2025-09-15",
-                "primary_document": "googl-8k.htm",
+                "filing_date": "2026-05-11",
+                "primary_document": "d109021d8k.htm",
             }
         ],
     },
@@ -56,8 +56,8 @@ OFFLINE_FIXTURES: dict[str, dict[str, Any]] = {
             "observations": [
                 {
                     "series_id": "GDP",
-                    "observation_date": "2025-03-31",
-                    "value": 28_900.0,
+                    "observation_date": "2025-01-01",
+                    "value": 30_042.113,
                 }
             ],
         }

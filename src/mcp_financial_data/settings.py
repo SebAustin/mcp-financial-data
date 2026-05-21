@@ -29,11 +29,9 @@ class Settings(BaseSettings):
 
     anthropic_api_key: SecretStr | None = Field(default=None, alias="ANTHROPIC_API_KEY")
     anthropic_model_primary: str = Field(
-        default="claude-sonnet-4-5-20260301", alias="ANTHROPIC_MODEL_PRIMARY"
+        default="claude-sonnet-4-5", alias="ANTHROPIC_MODEL_PRIMARY"
     )
-    anthropic_model_judge: str = Field(
-        default="claude-opus-4-7-20260301", alias="ANTHROPIC_MODEL_JUDGE"
-    )
+    anthropic_model_judge: str = Field(default="claude-opus-4-7", alias="ANTHROPIC_MODEL_JUDGE")
 
     max_api_spend_usd: float = Field(default=50.0, ge=0.0, alias="MAX_API_SPEND_USD")
 
