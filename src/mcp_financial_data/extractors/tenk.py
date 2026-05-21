@@ -40,6 +40,7 @@ from tenacity import (
 from mcp_financial_data.extractors._pricing import (
     UnknownModelPricingError,
     estimate_cost_usd,
+    resolve_api_model_id,
 )
 from mcp_financial_data.logging import get_logger
 from mcp_financial_data.settings import Settings, get_settings
@@ -231,7 +232,7 @@ async def _call_anthropic(
 ) -> Message:
     """Single ``messages.create`` round-trip; retried on 429/5xx/timeouts."""
     return await client.messages.create(
-        model=model,
+        model=resolve_api_model_id(model),
         max_tokens=max_tokens,
         system=DEFAULT_SYSTEM_PROMPT,
         messages=[

@@ -17,7 +17,11 @@ import anthropic
 from anthropic.types import TextBlock
 from pydantic import BaseModel, ConfigDict, Field
 
-from mcp_financial_data.extractors._pricing import UnknownModelPricingError, estimate_cost_usd
+from mcp_financial_data.extractors._pricing import (
+    UnknownModelPricingError,
+    estimate_cost_usd,
+    resolve_api_model_id,
+)
 from mcp_financial_data.logging import get_logger
 from mcp_financial_data.settings import Settings, get_settings
 
@@ -131,9 +135,10 @@ async def judge_with_claude(
         api_key=s.anthropic_api_key.get_secret_value(),
         max_retries=0,
     )
+    api_model = resolve_api_model_id(model)
     try:
         response = await client.messages.create(
-            model=model,
+            model=api_model,
             max_tokens=256,
             system=_JUDGE_SYSTEM,
             messages=[
@@ -143,6 +148,13 @@ async def judge_with_claude(
                 }
             ],
         )
+    except anthropic.NotFoundError as exc:
+        raise JudgeScoreError(
+            f"judge model {model!r} (api={api_model!r}) not found; "
+            f"set ANTHROPIC_MODEL_JUDGE to a model your key can access"
+        ) from exc
+    except anthropic.APIError as exc:
+        raise JudgeScoreError(f"judge Anthropic API error: {exc}") from exc
     finally:
         await client.close()
 

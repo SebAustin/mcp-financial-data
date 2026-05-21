@@ -36,6 +36,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+import anthropic
+
 from mcp_financial_data import __version__
 from mcp_financial_data.evals.dispatch import EvalDispatchError, dispatch_online
 from mcp_financial_data.evals.fixtures import get_offline_fixture
@@ -240,6 +242,9 @@ async def _run_one(
     except ExtractorSpendCapError as exc:
         error = str(exc)
         log.error("case.spend_cap", err=str(exc))
+    except anthropic.APIError as exc:
+        error = str(exc)
+        log.error("case.api_error", err=str(exc))
     except JudgeScoreError as exc:
         error = str(exc)
         log.error("case.judge_error", err=str(exc))
@@ -251,26 +256,32 @@ async def _run_one(
     if success and (offline or settings.eval_offline):
         judge = judge_with_stub(case.id, exec_acc, cit_cov)
     elif success:
-        outcome = await judge_with_claude(
-            case.id,
-            case.expected,
-            actual,
-            model=settings.anthropic_model_judge,
-            settings=settings,
-            latency_ms=latency_ms,
-        )
-        judge = outcome.score
-        judge_input_tokens = outcome.input_tokens
-        judge_output_tokens = outcome.output_tokens
-        judge_cost_usd = outcome.cost_usd
-        cost_usd = dispatch_cost_usd + judge_cost_usd
-        if budget_usd is not None and spend_so_far_usd + cost_usd > budget_usd:
-            success = False
-            error = (
-                f"--budget {budget_usd:.4f} would be exceeded after judge for {case.id} "
-                f"(spent={spend_so_far_usd:.4f}, case_cost={cost_usd:.4f})"
+        try:
+            outcome = await judge_with_claude(
+                case.id,
+                case.expected,
+                actual,
+                model=settings.anthropic_model_judge,
+                settings=settings,
+                latency_ms=latency_ms,
             )
-            log.error("case.budget_exceeded", err=error)
+            judge = outcome.score
+            judge_input_tokens = outcome.input_tokens
+            judge_output_tokens = outcome.output_tokens
+            judge_cost_usd = outcome.cost_usd
+            cost_usd = dispatch_cost_usd + judge_cost_usd
+            if budget_usd is not None and spend_so_far_usd + cost_usd > budget_usd:
+                success = False
+                error = (
+                    f"--budget {budget_usd:.4f} would be exceeded after judge for {case.id} "
+                    f"(spent={spend_so_far_usd:.4f}, case_cost={cost_usd:.4f})"
+                )
+                log.error("case.budget_exceeded", err=error)
+                judge = 0.0
+        except JudgeScoreError as exc:
+            success = False
+            error = str(exc)
+            log.error("case.judge_error", err=str(exc))
             judge = 0.0
     else:
         judge = 0.0

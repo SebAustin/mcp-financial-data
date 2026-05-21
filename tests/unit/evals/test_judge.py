@@ -8,7 +8,12 @@ import httpx
 import pytest
 import respx
 
-from mcp_financial_data.evals.judge import JudgeOutcome, JudgeRubricScores, judge_with_claude
+from mcp_financial_data.evals.judge import (
+    JudgeOutcome,
+    JudgeRubricScores,
+    JudgeScoreError,
+    judge_with_claude,
+)
 
 ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
 
@@ -60,3 +65,19 @@ async def test_judge_with_claude_returns_outcome(respx_mock: respx.Router) -> No
     assert outcome.input_tokens == 10
     assert outcome.output_tokens == 5
     assert outcome.cost_usd > 0.0
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_judge_not_found_raises_judge_score_error(respx_mock: respx.Router) -> None:
+    respx_mock.post(ANTHROPIC_MESSAGES_URL).mock(
+        return_value=httpx.Response(
+            404,
+            json={
+                "type": "error",
+                "error": {"type": "not_found_error", "message": "model: bad-model"},
+            },
+        )
+    )
+    with pytest.raises(JudgeScoreError, match="not found"):
+        await judge_with_claude("c1", {}, {}, model="bad-model")

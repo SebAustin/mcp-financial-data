@@ -47,3 +47,10 @@ def test_negative_token_count_rejected() -> None:
         p.cost_usd(input_tokens=-1, output_tokens=0)
     with pytest.raises(ValueError, match="non-negative"):
         p.cost_usd(input_tokens=0, output_tokens=-5)
+
+
+def test_resolve_api_model_id_maps_portfolio_fixture_ids() -> None:
+    from mcp_financial_data.extractors._pricing import resolve_api_model_id
+
+    assert resolve_api_model_id("claude-opus-4-7-20260301") == "claude-opus-4-7"
+    assert get_model_pricing("claude-opus-4-7").input_per_mtok == 15.00
