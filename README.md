@@ -31,21 +31,6 @@ Flow on camera: OAuth (`401` → authorized `/mcp`) → `tenk.extract_section` �
 **TenKSummaryCard** citation pills → `evals/runs/<run_id>/summary.json` →
 green CI on GitHub.
 
-> **About:** MCP server for SEC EDGAR + FRED + Polygon with OAuth 2.1, a
-> citation-grounded 10-K extractor, and MCP Apps inline UI — built for
-> Anthropic FDE, Bridgewater / Citadel quant, and Cursor FDE reviewers.
-
-## Demo
-
-**Loom (60s):** _Add your recording URL here after filming_
-[`docs/demo/loom-tenk-summary-card.md`](docs/demo/loom-tenk-summary-card.md)
-and [`prompts/99_loom_script.md`](prompts/99_loom_script.md) have the beat
-sheet (OAuth → `tenk.extract_section` → citation pills → eval JSONL).
-
-Flow: `make oauth-dev` → MCP client calls `tenk.extract_section` → inline
-**TenKSummaryCard** renders with SEC citation pills → smoke eval writes
-`evals/runs/<run_id>/summary.json`.
-
 ## Why this exists
 
 Financial-services AI work consistently fails the same audit checklist:
