@@ -24,7 +24,8 @@ flowchart TB
         EdgarClient[EDGAR async client]
         FredClient[FRED async client]
         PolygonClient[Polygon async client]
-        Extractor[10-K extractor]
+        Extractor["10-K extractor (Claude Sonnet 4.5)"]
+        EvalHarness[Eval harness (Claude Opus 4.7 judge)]
         Apps[MCP Apps UI registry]
     end
 
@@ -32,10 +33,10 @@ flowchart TB
         SEC[SEC EDGAR]
         FRED[FRED API]
         Polygon[Polygon.io]
-        Anthropic[Anthropic Messages API]
+        Anthropic["Anthropic Messages API"]
     end
 
-    PG[(Postgres response cache)]
+    Cache[(SQLite response cache 24h TTL)]
 
     clients -->|OAuth 2.1 + PKCE bearer| FastMCP
     Auth0 -->|JWT mint| clients
@@ -46,13 +47,14 @@ flowchart TB
     FastMCP --> EdgarClient --> SEC
     FastMCP --> FredClient --> FRED
     FastMCP --> PolygonClient --> Polygon
-    FastMCP --> Extractor --> Anthropic
+    FastMCP --> Extractor -->|"Citations API"| Anthropic
+    FastMCP --> EvalHarness -->|"LLM judge"| Anthropic
     FastMCP --> Apps
 
-    EdgarClient --> PG
-    FredClient --> PG
-    PolygonClient --> PG
-    Extractor --> PG
+    EdgarClient --> Cache
+    FredClient --> Cache
+    PolygonClient --> Cache
+    Extractor --> Cache
 ```
 
 ## 2. Request lifecycle

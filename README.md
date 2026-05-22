@@ -13,9 +13,6 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/tag/SebAustin/mcp-financial-data?label=v0.1.0)](https://github.com/SebAustin/mcp-financial-data/releases/tag/v0.1.0)
 
-This repo is project **P1** of a [9-project portfolio sprint][sprint] running
-May 18 – June 21, 2026.
-
 > **About:** MCP server for SEC EDGAR + FRED + Polygon with OAuth 2.1, a
 > citation-grounded 10-K extractor, and MCP Apps inline UI — built for
 > Anthropic FDE, Bridgewater / Citadel quant, and Cursor FDE reviewers.
@@ -24,8 +21,8 @@ May 18 – June 21, 2026.
 
 **Loom (60s):** _Add your recording URL here after filming_
 [`docs/demo/loom-tenk-summary-card.md`](docs/demo/loom-tenk-summary-card.md)
-and [`prompts/99_loom_script.md`](prompts/99_loom_script.md) have the beat
-sheet (OAuth → `tenk.extract_section` → citation pills → eval JSONL).
+has the beat sheet (OAuth → `tenk.extract_section` → citation pills → eval
+JSONL).
 
 Flow: `make oauth-dev` → MCP client calls `tenk.extract_section` → inline
 **TenKSummaryCard** renders with SEC citation pills → smoke eval writes
@@ -52,13 +49,15 @@ flowchart LR
     Server --> EDGAR[EDGAR async client]
     Server --> FRED[FRED async client]
     Server --> Polygon[Polygon.io async client]
-    Server --> Extractor["10-K Extractor (Claude Sonnet 4.5 + Citations)"]
+    Server --> Extractor["10-K Extractor"]
     Server --> Apps["MCP Apps inline UI"]
-    EDGAR --> Cache[(Postgres response cache 24h TTL)]
+    Server --> Evals["Eval harness"]
+    Extractor -->|"Claude Sonnet 4.5 + Citations API"| Anthropic[Anthropic Messages API]
+    Evals -->|"Claude Opus 4.7 judge"| Anthropic
+    EDGAR --> Cache[(SQLite response cache 24h TTL)]
     FRED --> Cache
     Polygon --> Cache
     Extractor --> Cache
-    Server --> Evals["evals/harness.py (JSONL runs)"]
 ```
 
 ## Quickstart
@@ -162,7 +161,6 @@ docs/adr/                    # MADR architecture decisions
 4. [Polygon.io REST API][polygon-rest]
 5. [Anthropic Citations API][anthropic-citations]
 
-[sprint]: https://github.com/SebAustin/portfolio-sprint-2026
 [mcp-spec]: https://modelcontextprotocol.io/specification/2025-11-25
 [edgar-fair]: https://www.sec.gov/os/accessing-edgar-data
 [fred-api]: https://fred.stlouisfed.org/docs/api/fred/
