@@ -72,6 +72,26 @@ oauth-dev: ## Print a dev OAuth 2.1 token for local CLI testing
 demo-prep: ## Print Loom demo commands and refresh offline smoke eval
 	@bash scripts/loom_demo_prep.sh
 
+.PHONY: demo-video
+demo-video: ## Prep video demo (smoke eval + browser preview + checklist)
+	@$(PY) scripts/demo_video.py prep
+
+.PHONY: demo-video-card
+demo-video-card: ## Open TenKSummaryCard preview in browser
+	@$(PY) scripts/demo_video.py card
+
+.PHONY: demo-video-audit
+demo-video-audit: ## Pretty-print latest smoke eval metrics for Scene 3
+	@$(PY) scripts/demo_video.py audit
+
+.PHONY: demo-video-oauth
+demo-video-oauth: ## Labeled OAuth 401→200 check for Scene 4 (needs make serve)
+	@$(PY) scripts/demo_video.py oauth
+
+.PHONY: demo-video-script
+demo-video-script: ## Print the 90s video teleprompter
+	@$(PY) scripts/demo_video.py script
+
 .PHONY: ui-build
 ui-build: ## Build TenKSummaryCard JS bundle (requires npm + public registry)
 	@if [ ! -f ui/tenk-summary-card/package.json ]; then \

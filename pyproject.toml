@@ -107,6 +107,7 @@ ignore = [
 # in tests is idiomatic. PT011 enforces a narrower regex but adds noise here.
 "tests/**" = ["S101", "ANN", "T20", "PT011"]
 "evals/**" = ["T20"]
+"scripts/**" = ["T20", "S603", "ANN"]
 ".github/scripts/**" = ["T20"]
 
 [tool.ruff.lint.isort]

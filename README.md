@@ -19,17 +19,19 @@
 
 ## Demo
 
-**Loom (60s):** _Paste your recording URL here after filming._
+**Video (90s):** _Paste your recording URL here after filming._
 
 | Step | Command |
 | --- | --- |
-| Prep | `make demo-prep` — offline smoke eval + copy-paste terminal commands |
-| Record | Follow [`docs/demo/loom-tenk-summary-card.md`](docs/demo/loom-tenk-summary-card.md) |
-| Server | `make serve` in one terminal; `make oauth-dev` for a dev Bearer token |
+| Prep | `make demo-video` — smoke eval + browser preview + scene checklist |
+| Script | [`docs/demo/video-script.md`](docs/demo/video-script.md) — teleprompter with 5 scenes |
+| Record | `make demo-video-card` → `make demo-video-audit` → `make demo-video-oauth` |
+| Server | `make serve` in a separate terminal for the OAuth scene |
 
-Flow on camera: OAuth (`401` → authorized `/mcp`) → `tenk.extract_section` →
-**TenKSummaryCard** citation pills → `evals/runs/<run_id>/summary.json` →
-green CI on GitHub.
+**Story arc:** problem (bad citations) → TenKSummaryCard with SEC pills → offline
+eval metrics at 1.0 → OAuth 401→200 → green CI.
+
+Legacy curl-based Loom notes: [`docs/demo/loom-tenk-summary-card.md`](docs/demo/loom-tenk-summary-card.md)
 
 ## Why this exists
 
