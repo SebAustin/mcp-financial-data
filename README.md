@@ -11,9 +11,25 @@
 [![Eval (nightly)](https://github.com/SebAustin/mcp-financial-data/actions/workflows/eval-nightly.yml/badge.svg)](https://github.com/SebAustin/mcp-financial-data/actions/workflows/eval-nightly.yml)
 [![Python](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/tag/SebAustin/mcp-financial-data?label=v0.1.0)](https://github.com/SebAustin/mcp-financial-data/releases/tag/v0.1.0)
 
 This repo is project **P1** of a [9-project portfolio sprint][sprint] running
 May 18 – June 21, 2026.
+
+> **About:** MCP server for SEC EDGAR + FRED + Polygon with OAuth 2.1, a
+> citation-grounded 10-K extractor, and MCP Apps inline UI — built for
+> Anthropic FDE, Bridgewater / Citadel quant, and Cursor FDE reviewers.
+
+## Demo
+
+**Loom (60s):** _Add your recording URL here after filming_
+[`docs/demo/loom-tenk-summary-card.md`](docs/demo/loom-tenk-summary-card.md)
+and [`prompts/99_loom_script.md`](prompts/99_loom_script.md) have the beat
+sheet (OAuth → `tenk.extract_section` → citation pills → eval JSONL).
+
+Flow: `make oauth-dev` → MCP client calls `tenk.extract_section` → inline
+**TenKSummaryCard** renders with SEC citation pills → smoke eval writes
+`evals/runs/<run_id>/summary.json`.
 
 ## Why this exists
 
@@ -72,17 +88,40 @@ make serve             # run the MCP server on $MCP_HOST:$MCP_PORT
 
 The eval harness writes per-case JSONL plus a summary JSON to
 `evals/runs/<run_id>/`. CI runs `--smoke --offline` on every PR; nightly
-CI runs `--full` against live APIs with a $5 spend cap.
+CI runs `--full --budget 5 --min-judge-score 0.85` against live APIs.
 
-| Metric | W1 target | Source of truth | Notes |
-| --- | --- | --- | --- |
-| Smoke pass rate | 5 / 5 cases | `evals/cases/seed.jsonl` | Offline fixtures. |
-| Mean exec-accuracy | ≥ 0.95 | `evals/metrics.py::exec_accuracy` | Deterministic. |
-| Mean citation coverage | = 1.00 (extractor) | `evals/metrics.py::citation_coverage` | Required for `tenk.*`. |
-| Mean judge score (offline) | ≥ 0.90 | `evals/metrics.py::judge_with_stub` | 0.5·exec + 0.5·citation. |
-| P50 latency (smoke) | ≤ 50 ms | harness `latency_ms` | Offline only. |
-| Total cost / smoke run | $0.00 | harness `total_cost_usd` | `--offline` enforced. |
-| Coverage gate (src/) | ≥ 85% | `pytest --cov-fail-under=85` | mypy `--strict` also gates. |
+| Metric | W1 target | W1 actual | Source of truth | Notes |
+| --- | --- | --- | --- | --- |
+| Smoke pass rate | 5 / 5 | **5 / 5** | `evals/cases/seed.jsonl` | Offline fixtures. |
+| Mean exec-accuracy | ≥ 0.95 | **1.00** (offline) / **0.80** (live) | `evals/metrics.py::exec_accuracy` | Live MSFT XBRL multi-row list match — tracked in follow-on issues. |
+| Mean citation coverage | = 1.00 | **1.00** | `evals/metrics.py::citation_coverage` | Required for `tenk.*`. |
+| Mean judge score (offline) | ≥ 0.90 | **1.00** | `evals/metrics.py::judge_with_stub` | 0.5·exec + 0.5·citation. |
+| Mean judge score (live full) | ≥ 0.85 | **0.93** | `evals/judge.py::judge_with_claude` | Opus 4.7 five-axis rubric. |
+| P50 latency (smoke) | ≤ 50 ms | **< 1 ms** | harness `latency_ms` | Offline only. |
+| Total cost / smoke run | $0.00 | **$0.00** | harness `total_cost_usd` | `--offline` enforced. |
+| Total cost / live full run | ≤ $5.00 | **$0.08** | harness `total_cost_usd` | `--budget 5` gate. |
+| Coverage gate (src/) | ≥ 85% | **~87%** | `pytest --cov-fail-under=85` | mypy `--strict` also gates. |
+
+### Latest `--full` runs (git `b8a4ba3`, 2026-05-21)
+
+Reproduce offline:
+
+```bash
+uv run python -m mcp_financial_data.evals.harness --full --offline
+```
+
+Reproduce live (requires `.env` secrets; ~$0.08 per run):
+
+```bash
+uv run python -m mcp_financial_data.evals.harness --full --budget 5 --min-judge-score 0.85
+```
+
+| Run | `run_id` | Pass | mean exec-acc | mean citation | mean judge | cost USD |
+| --- | --- | --- | --- | --- | --- | --- |
+| Offline full | `20260521T114816Z_b8a4ba3` | 5 / 5 | 1.00 | 1.00 | 1.00 | 0.00 |
+| Live full | `20260521T114826Z_b8a4ba3` | 5 / 5 | 0.80 | 1.00 | 0.93 | 0.08 |
+
+See [CHANGELOG.md](CHANGELOG.md) for the `v0.1.0` release notes.
 
 ## Hard constraints (skim before contributing)
 

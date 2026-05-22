@@ -1,6 +1,6 @@
 [project]
 name = "mcp-financial-data"
-version = "0.0.1"
+version = "0.1.0"
 description = "MCP server for SEC EDGAR + FRED + Polygon with OAuth 2.1, Claude-powered 10-K extraction, and MCP Apps inline UI."
 readme = "README.md"
 license = { text = "MIT" }
