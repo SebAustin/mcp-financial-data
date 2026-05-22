@@ -66,7 +66,7 @@ serve: ## Run the MCP server locally (streamable HTTP, port from env)
 
 .PHONY: oauth-dev
 oauth-dev: ## Print a dev OAuth 2.1 token for local CLI testing
-	$(UV) run python -m $(PKG).auth.oauth dev-token
+	@$(UV) run python -m $(PKG).auth.oauth dev-token
 
 .PHONY: demo-prep
 demo-prep: ## Print Loom demo commands and refresh offline smoke eval
