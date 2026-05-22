@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "mcp-financial-data": {
+      "url": "http://127.0.0.1:8765/mcp",
+      "headers": {
+        "Authorization": "Bearer <run make oauth-dev-cursor to generate .cursor/mcp.json>"
+      }
+    }
+  }
+}

@@ -111,9 +111,15 @@ Do not paste the full token on camera.
 
 If you want to show the MCP client inline UI instead of the browser preview:
 
-1. Pre-connect Cursor to `http://127.0.0.1:8765` with `make -s oauth-dev` token.
-2. Ask: *"Call tenk.extract_section for Apple Item 1A risk factors."*
-3. Swap Scene 2 browser footage for the inline **TenKSummaryCard** in chat.
+1. `make serve` in a terminal.
+2. `make oauth-dev-cursor` — writes **project** `.cursor/mcp.json` with a literal
+   Bearer token (required on macOS; `${env:MCP_TOKEN}` in `~/.cursor/mcp.json`
+   does not work because GUI Cursor does not inherit terminal exports).
+3. Reload MCP in Cursor (Settings → MCP → refresh, or restart Cursor).
+4. Ask: *"Call tenk.extract_section for Apple Item 1A risk factors."*
+5. Swap Scene 2 browser footage for the inline **TenKSummaryCard** in chat.
+
+Re-run `make oauth-dev-cursor` when the token expires (60 minutes).
 
 The browser preview uses the same offline fixture — same facts, same pills, zero API spend.
 

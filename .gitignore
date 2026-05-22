@@ -70,6 +70,7 @@ Thumbs.db
 # Cursor / Claude / AI tooling local state
 .cursor/state/
 .cursor/locks/
+.cursor/mcp.json
 .claude/
 CLAUDE.local.md
 

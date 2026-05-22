@@ -68,6 +68,10 @@ serve: ## Run the MCP server locally (streamable HTTP, port from env)
 oauth-dev: ## Print a dev OAuth 2.1 token for local CLI testing
 	@$(UV) run python -m $(PKG).auth.oauth dev-token
 
+.PHONY: oauth-dev-cursor
+oauth-dev-cursor: ## Write .cursor/mcp.json with a fresh dev Bearer token for Cursor
+	@bash scripts/sync_cursor_mcp.sh
+
 .PHONY: demo-prep
 demo-prep: ## Print Loom demo commands and refresh offline smoke eval
 	@bash scripts/loom_demo_prep.sh
