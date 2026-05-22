@@ -19,20 +19,14 @@
 
 ## Demo
 
-Start with the [interactive deck](docs/presentation.html) for the full walkthrough,
-or run `make demo-start` for the offline story hub. A 2-minute video walkthrough is
-on the way.
+Start with the [interactive deck](docs/presentation.html) for the full walkthrough.
 
 | Step | Command |
 | --- | --- |
 | Present | [`docs/presentation.html`](docs/presentation.html) — 14-slide interactive project deck (open in any browser; `←` `→` to navigate, `O` for overview). PowerPoint version: [`docs/mcp-financial-data-presentation.pptx`](docs/mcp-financial-data-presentation.pptx) |
-| Record | `make demo-start` — single-browser story hub (4 slides, offline) |
-| Script | [`docs/demo/video-script.md`](docs/demo/video-script.md) — slide-synced teleprompter |
 | Live MCP | [`docs/demo/cursor-mcp-setup.md`](docs/demo/cursor-mcp-setup.md) — optional Cursor appendix |
 
 **Story:** analyst asks for AAPL Item 1A risks → cited TenKSummaryCard → eval proof at 1.0 → stack + CI.
-
-Legacy multi-terminal flow: `make demo-video` · [`loom-tenk-summary-card.md`](docs/demo/loom-tenk-summary-card.md)
 
 ## Why this exists
 
