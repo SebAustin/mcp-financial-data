@@ -1,12 +1,10 @@
 # Loom demo (legacy)
 
-> **Use the new video demo instead:** [`video-script.md`](video-script.md)
+> **Use the story demo hub:** [`video-script.md`](video-script.md)
 >
-> Prep: `make demo-video` · Teleprompter: `make demo-video-script`
+> Prep: `make demo-start` · Teleprompter: `make demo-video-script`
 
-This document kept the original 60s curl-heavy flow. The replacement demo leads
-with a **browser preview** of TenKSummaryCard (same offline fixture, no MCP
-client setup on camera) and uses `make demo-video-oauth` for a labeled OAuth
-check instead of hand-typed curl commands.
+Older flows (`make demo-video-card`, curl OAuth, multi-terminal scenes) are
+superseded by the single-browser analyst diligence hub.
 
-See [`video-script.md`](video-script.md) for the full 90-second teleprompter.
+See [`cursor-mcp-setup.md`](cursor-mcp-setup.md) for optional live Cursor MCP.

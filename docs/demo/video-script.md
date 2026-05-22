@@ -1,99 +1,77 @@
 # Video demo script — mcp-financial-data v0.1.0
 
-**Length:** 90 seconds · **Format:** 5 scenes · **Windows:** browser + terminal
+**Length:** 2 minutes · **Format:** 4 slides · **Window:** single browser tab
 
-Prep once:
-
-```bash
-make demo-video        # smoke eval + preview HTML + checklist
-make serve             # Terminal A — leave running
-```
-
-During recording, advance scenes with:
+## Before you roll
 
 ```bash
-make demo-video-script   # full teleprompter (this file)
-make demo-video-card     # Scene 2 — opens TenKSummaryCard in browser
-make demo-video-audit    # Scene 3 — formatted eval metrics
-make demo-video-oauth    # Scene 4 — labeled 401 → 200
+make demo-start
 ```
+
+This runs an offline smoke eval, builds the story hub, opens `http://127.0.0.1:8766/index.html`, and prints teleprompter cues in the terminal.
+
+Advance slides with **← →** arrow keys or click the numbered dots.
 
 ---
 
-## Scene 1 — The problem (0:00–0:15)
+## Slide 1 — The ask (0:00–0:20)
 
-**Show:** README → **Why this exists** (first three bullets)
+**Show:** Mock analyst chat + `tenk.extract_section` chip
 
 **Say:**
 
-> Financial AI fails the same audit every time. The agent cites the wrong filing.
-> It drops facts silently when the source doesn't support them. Or the MCP server
-> never validated the JWT on the request. This repo fixes all three.
+> A compliance analyst is preparing a diligence memo on Apple. They ask the MCP
+> client for supply chain and macroeconomic risks from 10-K Item 1A — and they
+> need every claim tied to the filing, not model paraphrase.
 
-**Do:** Scroll slowly through bullets 1–3. Do not show `.env`.
+**Do:** Read the bubble on screen. Point at the tool chip.
 
 ---
 
-## Scene 2 — Citation-grounded extraction (0:15–0:45)
+## Slide 2 — The answer (0:20–1:05)
 
-**Show:** Browser — TenKSummaryCard for **Apple Inc. · AAPL 10-K Item 1A**
+**Show:** TenKSummaryCard — Apple Inc. · AAPL 10-K Item 1A
 
 **Say:**
 
-> `tenk.extract_section` pulls risk factors from a 10-K section. Claude Sonnet 4.5
-> returns only citation-grounded facts — every claim you see on this card has at
-> least one SEC reference. Uncited model output never appears here; it stays in
-> `notes`.
+> The server calls `tenk.extract_section`. Claude Sonnet 4.5 returns only
+> citation-grounded facts via the Citations API. Every bullet on this card has
+> at least one SEC reference. Uncited model output never appears here.
 
 **Do:**
 
 1. Point at the two risk-factor bullets.
-2. **Click one citation pill** → SEC EDGAR browse page opens.
-3. Briefly show the footer: model id, tokens, cost, latency.
-
-**Tip:** Use `make demo-video-card --serve` if `file://` renders oddly in your recorder.
+2. **Click a citation pill** — SEC EDGAR browse page opens.
+3. Briefly show the footer: model, tokens, cost, latency.
 
 ---
 
-## Scene 3 — Deterministic audit trail (0:45–1:05)
+## Slide 3 — The proof (1:05–1:35)
 
-**Show:** Terminal — `make demo-video-audit`
+**Show:** Split panel — `[INFERENCE]` note vs cited facts + eval metrics
 
 **Say:**
 
-> We don't trust vibes. The offline eval harness scores exec-accuracy, citation
-> coverage, and a paired judge on every case. Smoke eval on this build: all ones,
-> zero dollars, fully offline. CI runs the same gate on every pull request.
+> Speculative output stays in notes, tagged INFERENCE — never surfaced as a
+> fact. The offline eval harness scores exec-accuracy, citation coverage, and
+> a paired judge. On this build: all ones, zero dollars, fully offline. CI
+> runs the same smoke gate on every pull request.
 
-**Do:** Let the formatted metrics sit on screen for 5 seconds. Highlight the three
-`1.0` scores and `offline: true`.
+**Do:** Gesture left (bad) then right (good). Pause on the three **1.0** metrics.
 
 ---
 
-## Scene 4 — OAuth resource server (1:05–1:20)
+## Slide 4 — The stack (1:35–2:00)
 
-**Show:** Terminal — `make demo-video-oauth` (with `make serve` running)
-
-**Say:**
-
-> Every HTTP request to `/mcp` carries a Bearer JWT. No token — RFC 6750 401 with
-> `WWW-Authenticate`. Valid dev token — authorized. Production swaps the JWKS URL;
-> the validation code path is the same.
-
-**Do:** Run the command once. The script prints ✓ labels for **401** then **200**.
-Do not paste the full token on camera.
-
----
-
-## Scene 5 — Close (1:20–1:30)
-
-**Show:** GitHub — green CI badge + eval-delta sticky comment on a recent PR
+**Show:** Architecture strip + green CI badge + repo link
 
 **Say:**
 
-> mcp-financial-data — MCP spec 2025-11-25, SEC EDGAR, FRED, Polygon, OAuth 2.1,
-> and citation-grounded 10-K extraction. Open source at
-> github.com/SebAustin/mcp-financial-data.
+> mcp-financial-data — MCP spec 2025-11-25. OAuth 2.1 resource server, SEC
+> EDGAR, FRED, Polygon, citation-grounded 10-K extraction, and MCP Apps inline
+> UI. Open source at github.com/SebAustin/mcp-financial-data.
+
+**Do:** Let the CI badge and repo link sit on screen for the close.
 
 ---
 
@@ -101,27 +79,16 @@ Do not paste the full token on camera.
 
 | Item | Recommendation |
 | --- | --- |
-| Resolution | 1080p, browser zoom 110% for citation pills |
-| Windows | Browser left, terminal right (or switch cleanly — no overlapping chaos) |
-| Mic | Wired; read at ~160 wpm |
-| Takes | Three max; Scene 2 + 3 are fully offline and deterministic |
-| Avoid | curl one-liners, live `--full` eval, `.env` on camera, theme switches |
+| Command | `make demo-start` only — no terminal switching on camera |
+| Resolution | 1080p; browser zoom 100–110% |
+| Navigation | Arrow keys between slides; rehearse pill click on Slide 2 |
+| Takes | Three max; Slides 1–3 are fully offline and deterministic |
+| Avoid | `.env` on camera, live `--full` eval, OAuth terminal scenes |
 
-## Optional Cursor scene (appendix, not in 90s cut)
+## Appendix — live Cursor MCP (optional)
 
-If you want to show the MCP client inline UI instead of the browser preview:
-
-1. `make serve` in a terminal.
-2. `make oauth-dev-cursor` — writes **project** `.cursor/mcp.json` with a literal
-   Bearer token (required on macOS; `${env:MCP_TOKEN}` in `~/.cursor/mcp.json`
-   does not work because GUI Cursor does not inherit terminal exports).
-3. Reload MCP in Cursor (Settings → MCP → refresh, or restart Cursor).
-4. Ask: *"Call tenk.extract_section for Apple Item 1A risk factors."*
-5. Swap Scene 2 browser footage for the inline **TenKSummaryCard** in chat.
-
-Re-run `make oauth-dev-cursor` when the token expires (60 minutes).
-
-The browser preview uses the same offline fixture — same facts, same pills, zero API spend.
+See [`cursor-mcp-setup.md`](cursor-mcp-setup.md) if you want to swap Slide 2 for a live
+Cursor inline **TenKSummaryCard** instead of the browser hub.
 
 ## After recording
 

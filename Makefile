@@ -76,6 +76,10 @@ oauth-dev-cursor: ## Write .cursor/mcp.json with a fresh dev Bearer token for Cu
 demo-prep: ## Print Loom demo commands and refresh offline smoke eval
 	@bash scripts/loom_demo_prep.sh
 
+.PHONY: demo-start
+demo-start: ## Open story demo hub in browser (recommended for recording)
+	@$(PY) scripts/demo_video.py start
+
 .PHONY: demo-video
 demo-video: ## Prep video demo (smoke eval + browser preview + checklist)
 	@$(PY) scripts/demo_video.py prep

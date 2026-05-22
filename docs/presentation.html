@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>mcp-financial-data — project presentation</title>
+<style>
+  :root {
+    --bg: #0a0e16;
+    --bg-2: #0f1622;
+    --surface: #141d2e;
+    --surface-2: #1a2436;
+    --text: #eef2f8;
+    --muted: #9aa8c2;
+    --faint: #61718d;
+    --accent: #4f8cff;
+    --accent-2: #7c5cff;
+    --good: #2ee08a;
+    --bad: #ff5d6c;
+    --amber: #ffb347;
+    --border: #243049;
+    --mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
+    --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--sans);
+    background:
+      radial-gradient(1100px 620px at 86% -10%, rgba(124,92,255,0.16), transparent 70%),
+      radial-gradient(1000px 560px at 4% 112%, rgba(79,140,255,0.15), transparent 70%),
+      var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---- progress + chrome ---- */
+  .progress {
+    position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 60;
+    background: rgba(255,255,255,0.04);
+  }
+  .progress > span {
+    display: block; height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    transition: width 0.4s cubic-bezier(.4,0,.2,1);
+  }
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.85rem 1.6rem;
+  }
+  .brand { display: flex; align-items: center; gap: 0.6rem; }
+  .brand .mark {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: grid; place-items: center; font-weight: 800; font-size: 0.85rem; color: #fff;
+    box-shadow: 0 8px 20px -6px rgba(79,140,255,0.7);
+  }
+  .brand .t { font-size: 0.82rem; font-weight: 600; }
+  .brand .s { font-size: 0.7rem; color: var(--faint); }
+  .topbar .count { font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .topbar .count b { color: var(--text); }
+
+  /* ---- deck ---- */
+  .deck { position: relative; height: 100vh; width: 100vw; }
+  .slide {
+    position: absolute; inset: 0;
+    display: none; flex-direction: column; justify-content: center;
+    padding: 5.2rem 6vw 4.4rem;
+    opacity: 0;
+  }
+  .slide.active { display: flex; animation: rise 0.5s cubic-bezier(.2,.7,.2,1) forwards; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (max-width: 720px) { .slide { padding: 5rem 7vw 4.4rem; } }
+
+  .kicker {
+    display: inline-flex; align-items: center; gap: 0.5rem; align-self: flex-start;
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--accent); background: rgba(79,140,255,0.1);
+    border: 1px solid rgba(79,140,255,0.22); padding: 0.34rem 0.75rem;
+    border-radius: 999px; margin-bottom: 1.15rem;
+  }
+  .kicker .n { color: var(--faint); }
+  h1 { font-size: clamp(1.8rem, 3.4vw, 3rem); line-height: 1.08; letter-spacing: -0.03em; font-weight: 800; }
+  h2 { font-size: clamp(1.5rem, 2.6vw, 2.3rem); line-height: 1.12; letter-spacing: -0.025em; font-weight: 800; margin-bottom: 0.55rem; }
+  .hl { background: linear-gradient(120deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lede { font-size: clamp(0.98rem, 1.4vw, 1.15rem); color: var(--muted); line-height: 1.55; max-width: 46rem; margin-top: 0.55rem; }
+  .eyebrow { font-size: 0.8rem; color: var(--faint); margin-top: 1rem; }
+  code, .mono { font-family: var(--mono); }
+  code {
+    font-size: 0.88em; background: rgba(79,140,255,0.1);
+    padding: 0.08rem 0.36rem; border-radius: 5px; color: #cfe0ff;
+  }
+
+  /* ---- cover ---- */
+  .cover { align-items: flex-start; }
+  .cover .badges { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.6rem 0 1.2rem; }
+  .badge {
+    font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 0.4rem 0.7rem; border-radius: 8px;
+  }
+  .badge b { color: var(--good); }
+  .cover-foot { display: flex; flex-wrap: wrap; gap: 1.6rem; margin-top: 1.7rem; }
+  .cover-foot div .k { font-size: 0.72rem; color: var(--faint); text-transform: uppercase; letter-spacing: 0.08em; }
+  .cover-foot div .v { font-size: 1.05rem; font-weight: 700; margin-top: 0.15rem; }
+
+  /* ---- generic layout ---- */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; margin-top: 1.5rem; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.5rem; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.9rem; margin-top: 1.5rem; }
+  @media (max-width: 880px) {
+    .grid2, .grid3, .grid4 { grid-template-columns: 1fr; }
+  }
+  .card {
+    background: linear-gradient(180deg, var(--surface), var(--bg-2));
+    border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem 1.25rem;
+  }
+  .card .ico { font-size: 1.05rem; }
+  .card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.35rem; display: flex; align-items: center; gap: 0.5rem; }
+  .card p { font-size: 0.86rem; color: var(--muted); line-height: 1.5; }
+  .card .num { font-size: 0.7rem; font-family: var(--mono); color: var(--faint); }
+
+  .tag {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    font-size: 0.7rem; font-weight: 600; padding: 0.18rem 0.5rem; border-radius: 6px;
+  }
+  .tag.blue { background: rgba(79,140,255,0.15); color: #9dc0ff; }
+  .tag.green { background: rgba(46,224,138,0.15); color: var(--good); }
+  .tag.red { background: rgba(255,93,108,0.15); color: var(--bad); }
+  .tag.amber { background: rgba(255,179,71,0.15); color: var(--amber); }
+
+  /* ---- table ---- */
+  table { width: 100%; border-collapse: collapse; margin-top: 1.4rem; font-size: 0.86rem; }
+  th, td { text-align: left; padding: 0.62rem 0.8rem; border-bottom: 1px solid var(--border); }
+  th { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); font-weight: 700; }
+  td .mono { font-size: 0.82rem; color: #cfe0ff; }
+  tr:last-child td { border-bottom: none; }
+  td.ok { color: var(--good); font-weight: 700; }
+
+  /* ---- problem list ---- */
+  .problems { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 1.5rem; }
+  .problem {
+    display: flex; gap: 0.95rem; align-items: flex-start;
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 3px solid var(--bad); border-radius: 10px; padding: 0.85rem 1.05rem;
+  }
+  .problem .x {
+    flex: none; width: 1.5rem; height: 1.5rem; border-radius: 50%;
+    background: rgba(255,93,108,0.15); color: var(--bad);
+    display: grid; place-items: center; font-weight: 800; font-size: 0.8rem;
+  }
+  .problem p { font-size: 0.9rem; color: var(--muted); line-height: 1.45; }
+  .problem p b { color: var(--text); }
+
+  /* ---- architecture svg ---- */
+  .archwrap { margin-top: 1.2rem; display: flex; justify-content: center; }
+  svg .nodebox { fill: var(--surface-2); stroke: var(--border); }
+  svg .nodebox.key { fill: rgba(79,140,255,0.12); stroke: rgba(79,140,255,0.5); }
+  svg .nodebox.ext { fill: rgba(124,92,255,0.1); stroke: rgba(124,92,255,0.45); }
+  svg text { fill: var(--text); font-family: var(--sans); }
+  svg .lbl { fill: var(--muted); font-size: 11px; }
+  svg .flow { stroke: var(--faint); stroke-width: 1.5; fill: none; }
+  svg .flow.hot { stroke: var(--accent); stroke-width: 2; }
+
+  /* ---- contract / before-after ---- */
+  .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; margin-top: 1.4rem; }
+  @media (max-width: 880px) { .ba { grid-template-columns: 1fr; } }
+  .ba .col { background: linear-gradient(180deg, var(--surface), var(--bg-2)); border: 1px solid var(--border); border-radius: 14px; padding: 1.15rem; }
+  .ba .col.bad { border-color: rgba(255,93,108,0.4); }
+  .ba .col.good { border-color: rgba(46,224,138,0.4); }
+  .ba .col h3 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.8rem; display: flex; gap: 0.5rem; align-items: center; }
+  .quote { font-size: 0.92rem; line-height: 1.55; }
+  .quote.infer { color: #ffb9bf; font-style: italic; border-left: 2px solid var(--bad); padding-left: 0.8rem; }
+  .quote.fact { padding-left: 0.8rem; border-left: 2px solid var(--good); }
+  .citebar { margin-top: 0.6rem; font-family: var(--mono); font-size: 0.72rem; color: var(--faint); }
+  .pipeline { display: flex; flex-wrap: wrap; align-items: center; gap: 0.45rem; margin-top: 1.3rem; font-size: 0.78rem; }
+  .pipeline .step { background: var(--surface-2); border: 1px solid var(--border); padding: 0.42rem 0.65rem; border-radius: 8px; }
+  .pipeline .step.k { border-color: rgba(79,140,255,0.45); background: rgba(79,140,255,0.1); color: #cfe0ff; }
+  .pipeline .ar { color: var(--faint); }
+
+  /* ---- tenk card mock ---- */
+  .cardmock {
+    background: #fff; color: #0b1220; border-radius: 14px; padding: 1.3rem 1.5rem;
+    max-width: 34rem; box-shadow: 0 0 0 1px rgba(79,140,255,0.25), 0 24px 60px -20px rgba(79,140,255,0.4);
+  }
+  .cardmock .ch1 { font-size: 1.15rem; font-weight: 800; }
+  .cardmock .csub { font-size: 0.78rem; color: #5a6b86; margin-top: 0.1rem; }
+  .cardmock h4 { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: #8a97ad; margin: 1rem 0 0.5rem; }
+  .cardmock .fact { font-size: 0.9rem; line-height: 1.45; padding-bottom: 0.7rem; margin-bottom: 0.7rem; border-bottom: 1px solid #eef1f6; }
+  .cardmock .fact:last-of-type { border-bottom: none; }
+  .cardmock .cpill {
+    display: inline-block; margin-top: 0.4rem; font-size: 0.7rem;
+    background: #e8f0fe; color: #1a56db; border-radius: 999px; padding: 0.15rem 0.55rem;
+    font-family: var(--mono);
+  }
+  .cardmock .cfoot {
+    display: flex; flex-wrap: wrap; gap: 0.8rem; font-size: 0.68rem; color: #6b7894;
+    margin-top: 1rem; font-family: var(--mono); border-top: 1px solid #eef1f6; padding-top: 0.7rem;
+  }
+  .mockside { display: flex; flex-direction: column; gap: 0.85rem; }
+  .mocknote {
+    background: var(--surface); border: 1px solid rgba(255,93,108,0.35);
+    border-radius: 10px; padding: 0.85rem 1rem;
+  }
+  .mocknote .lab { font-size: 0.68rem; font-weight: 700; color: var(--bad); letter-spacing: 0.06em; }
+  .mocknote p { font-size: 0.82rem; color: #ffb9bf; font-style: italic; margin-top: 0.3rem; line-height: 1.45; }
+
+  /* ---- metric tiles ---- */
+  .tile {
+    background: linear-gradient(180deg, var(--surface), var(--bg-2));
+    border: 1px solid var(--border); border-radius: 14px; padding: 1.2rem 1rem;
+    text-align: center; position: relative; overflow: hidden;
+  }
+  .tile::after { content: ""; position: absolute; inset: 0 0 auto 0; height: 2px;
+    background: linear-gradient(90deg, var(--good), var(--accent)); }
+  .tile .v {
+    font-size: clamp(1.6rem, 3vw, 2.3rem); font-weight: 800; letter-spacing: -0.03em;
+    background: linear-gradient(120deg, var(--good), var(--accent));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    font-variant-numeric: tabular-nums;
+  }
+  .tile .l { font-size: 0.74rem; color: var(--muted); margin-top: 0.3rem; font-weight: 600; }
+  .tile .sub { font-size: 0.66rem; color: var(--faint); margin-top: 0.15rem; }
+
+  .checks { display: flex; flex-direction: column; gap: 0.55rem; margin-top: 1.3rem; }
+  .check { display: flex; gap: 0.7rem; align-items: flex-start; font-size: 0.88rem; color: var(--muted); }
+  .check .c { color: var(--good); font-weight: 800; flex: none; }
+  .check b { color: var(--text); }
+
+  .foot-note { font-size: 0.74rem; color: var(--faint); margin-top: 1.3rem; }
+
+  /* ---- close ---- */
+  .closegrid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 1.4rem; margin-top: 1.6rem; }
+  @media (max-width: 880px) { .closegrid { grid-template-columns: 1fr; } }
+  .linkrow { display: flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; margin-top: 0.55rem; }
+  .linkrow a { color: var(--accent); text-decoration: none; font-weight: 600; font-family: var(--mono); }
+  .linkrow a:hover { text-decoration: underline; }
+
+  /* ---- nav dots ---- */
+  .dots {
+    position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 0.4rem; z-index: 50;
+    background: rgba(15,22,34,0.8); border: 1px solid var(--border);
+    padding: 0.4rem 0.55rem; border-radius: 999px; backdrop-filter: blur(10px);
+  }
+  .dots button {
+    width: 0.55rem; height: 0.55rem; border-radius: 50%; border: none; cursor: pointer;
+    background: var(--border); transition: all 0.2s ease; padding: 0;
+  }
+  .dots button.active { background: linear-gradient(135deg, var(--accent), var(--accent-2)); width: 1.4rem; border-radius: 999px; }
+  .hint {
+    position: fixed; bottom: 1.05rem; right: 1.3rem; z-index: 50;
+    font-size: 0.72rem; color: var(--faint);
+  }
+  .hint kbd {
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px;
+    padding: 0.05rem 0.38rem; font-family: var(--mono); font-size: 0.7rem; color: var(--muted);
+  }
+
+  /* ---- overview grid ---- */
+  .overview {
+    position: fixed; inset: 0; z-index: 70; display: none;
+    background: rgba(8,11,18,0.97); padding: 4rem 3vw;
+    overflow-y: auto;
+  }
+  .overview.show { display: block; }
+  .overview h3 { font-size: 0.8rem; color: var(--faint); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1.2rem; }
+  .ovgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 0.85rem; }
+  .ovcard {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.85rem; cursor: pointer; transition: all 0.16s ease;
+  }
+  .ovcard:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .ovcard .ovn { font-family: var(--mono); font-size: 0.7rem; color: var(--faint); }
+  .ovcard .ovt { font-size: 0.84rem; font-weight: 600; margin-top: 0.3rem; line-height: 1.3; }
+</style>
+</head>
+<body>
+
+<div class="progress"><span id="bar"></span></div>
+<div class="topbar">
+  <div class="brand">
+    <div class="mark">F</div>
+    <div>
+      <div class="t">mcp-financial-data</div>
+      <div class="s">project presentation · v0.1.0</div>
+    </div>
+  </div>
+  <div class="count"><b id="cur">1</b> / <span id="total">14</span></div>
+</div>
+
+<div class="deck" id="deck">
+
+  <!-- 1 — COVER -->
+  <section class="slide cover active">
+    <span class="kicker"><span class="n">MCP</span> · spec 2025-11-25</span>
+    <h1>An MCP server for financial data<br />that <span class="hl">cites its sources</span> — or stays silent.</h1>
+    <p class="lede">SEC EDGAR + FRED + Polygon, behind OAuth 2.1, with a citation-grounded 10-K
+      extractor powered by Claude Sonnet 4.5 and an MCP Apps inline UI. Every model claim traces
+      back to the filing, or it never ships.</p>
+    <div class="badges">
+      <span class="badge">CI <b>passing</b></span>
+      <span class="badge">coverage <b>~87%</b></span>
+      <span class="badge">mypy <b>--strict</b></span>
+      <span class="badge">eval judge <b>0.93</b></span>
+      <span class="badge">license <b>MIT</b></span>
+    </div>
+    <div class="cover-foot">
+      <div><div class="k">Language</div><div class="v">Python 3.12</div></div>
+      <div><div class="k">Surface</div><div class="v">5 tools · 1 app</div></div>
+      <div><div class="k">Codebase</div><div class="v">~7.4k LOC</div></div>
+      <div><div class="k">Decisions</div><div class="v">9 ADRs</div></div>
+    </div>
+    <p class="eyebrow">github.com/SebAustin/mcp-financial-data &nbsp;·&nbsp; press <kbd style="font-family:var(--mono)">→</kbd> to begin</p>
+  </section>
+
+  <!-- 2 — THE PROBLEM -->
+  <section class="slide">
+    <span class="kicker"><span class="n">01</span> · The problem</span>
+    <h2>Financial-services AI fails the <span class="hl">same audit checklist</span></h2>
+    <p class="lede">Every one of these is a quiet, expensive failure mode. This project treats all
+      four as hard constraints — enforced in code and in CI, not in a style guide.</p>
+    <div class="problems">
+      <div class="problem"><div class="x">1</div><p><b>Wrong-source citations.</b> The agent answers with a number, but the citation points at the wrong filing.</p></div>
+      <div class="problem"><div class="x">2</div><p><b>Silent fact drops.</b> The agent omits a fact when the source doesn't support it — with no signal that anything was dropped.</p></div>
+      <div class="problem"><div class="x">3</div><p><b>Unscoped integrations.</b> The MCP integration never validates JWT scopes per request.</p></div>
+      <div class="problem"><div class="x">4</div><p><b>Non-deterministic evals.</b> The harness isn't replayable, so yesterday's regression is indistinguishable from a flaky judge today.</p></div>
+    </div>
+  </section>
+
+  <!-- 3 — WHAT IT IS -->
+  <section class="slide">
+    <span class="kicker"><span class="n">02</span> · What it is</span>
+    <h2>One server. Five tools, one inline app, <span class="hl">one hard rule.</span></h2>
+    <p class="lede">A FastMCP server speaking MCP spec 2025-11-25 over streamable HTTP. Read-only
+      market and filing data — plus a Claude-grounded extractor that is the centrepiece.</p>
+    <table>
+      <thead><tr><th>Surface</th><th>Tool / endpoint</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag blue">MCP tool</span></td><td><span class="mono">edgar.list_filings</span></td><td>Recent SEC filings for a CIK.</td></tr>
+        <tr><td><span class="tag blue">MCP tool</span></td><td><span class="mono">edgar.company_facts</span></td><td>XBRL facts — us-gaap concepts.</td></tr>
+        <tr><td><span class="tag blue">MCP tool</span></td><td><span class="mono">fred.series</span></td><td>FRED economic time series.</td></tr>
+        <tr><td><span class="tag blue">MCP tool</span></td><td><span class="mono">polygon.aggregates</span></td><td>OHLCV aggregate bars.</td></tr>
+        <tr><td><span class="tag green">MCP tool</span></td><td><span class="mono">tenk.extract_section</span></td><td>Citation-grounded 10-K claims.</td></tr>
+        <tr><td><span class="tag amber">MCP App</span></td><td><span class="mono">tenk-summary-card</span></td><td>Inline UI rendering the extraction.</td></tr>
+        <tr><td><span class="tag blue">OAuth</span></td><td><span class="mono">RFC 6750 resource server</span></td><td>Validates JWTs against an external IdP.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 4 — ARCHITECTURE -->
+  <section class="slide">
+    <span class="kicker"><span class="n">03</span> · Architecture</span>
+    <h2>Every request is <span class="hl">authenticated, cached, and traceable</span></h2>
+    <div class="archwrap">
+      <svg viewBox="0 0 920 360" width="100%" style="max-width:920px">
+        <defs>
+          <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+            <path d="M0,0 L7,3 L0,6 Z" fill="#61718d" />
+          </marker>
+          <marker id="ah2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+            <path d="M0,0 L7,3 L0,6 Z" fill="#4f8cff" />
+          </marker>
+        </defs>
+        <!-- client -->
+        <rect class="nodebox" x="20" y="150" width="150" height="60" rx="10"/>
+        <text x="95" y="175" text-anchor="middle" font-size="13" font-weight="700">MCP Client</text>
+        <text class="lbl" x="95" y="193" text-anchor="middle">Claude Desktop · Cursor</text>
+        <!-- oauth -->
+        <rect class="nodebox key" x="225" y="150" width="135" height="60" rx="10"/>
+        <text x="292" y="175" text-anchor="middle" font-size="13" font-weight="700">OAuth 2.1 RS</text>
+        <text class="lbl" x="292" y="193" text-anchor="middle">JWT + PKCE</text>
+        <!-- server -->
+        <rect class="nodebox key" x="415" y="150" width="135" height="60" rx="10"/>
+        <text x="482" y="175" text-anchor="middle" font-size="13" font-weight="700">FastMCP</text>
+        <text class="lbl" x="482" y="193" text-anchor="middle">streamable HTTP</text>
+        <!-- right column nodes -->
+        <rect class="nodebox" x="610" y="20" width="170" height="52" rx="10"/>
+        <text x="695" y="42" text-anchor="middle" font-size="12" font-weight="700">EDGAR · FRED · Polygon</text>
+        <text class="lbl" x="695" y="59" text-anchor="middle">async clients</text>
+        <rect class="nodebox key" x="610" y="95" width="170" height="52" rx="10"/>
+        <text x="695" y="117" text-anchor="middle" font-size="12" font-weight="700">10-K Extractor</text>
+        <text class="lbl" x="695" y="134" text-anchor="middle">citation-grounded</text>
+        <rect class="nodebox" x="610" y="170" width="170" height="52" rx="10"/>
+        <text x="695" y="192" text-anchor="middle" font-size="12" font-weight="700">MCP Apps UI</text>
+        <text class="lbl" x="695" y="209" text-anchor="middle">TenKSummaryCard</text>
+        <rect class="nodebox" x="610" y="245" width="170" height="52" rx="10"/>
+        <text x="695" y="267" text-anchor="middle" font-size="12" font-weight="700">Eval harness</text>
+        <text class="lbl" x="695" y="284" text-anchor="middle">smoke / full / offline</text>
+        <!-- anthropic -->
+        <rect class="nodebox ext" x="610" y="318" width="170" height="40" rx="10"/>
+        <text x="695" y="343" text-anchor="middle" font-size="12" font-weight="700">Anthropic Messages API</text>
+        <!-- cache -->
+        <rect class="nodebox" x="820" y="120" width="78" height="80" rx="10"/>
+        <text x="859" y="152" text-anchor="middle" font-size="11" font-weight="700">SQLite</text>
+        <text class="lbl" x="859" y="168" text-anchor="middle">cache</text>
+        <text class="lbl" x="859" y="182" text-anchor="middle">24h TTL</text>
+        <!-- flows -->
+        <path class="flow hot" d="M170,180 L222,180" marker-end="url(#ah2)"/>
+        <path class="flow hot" d="M360,180 L412,180" marker-end="url(#ah2)"/>
+        <path class="flow" d="M550,178 C580,178 580,48 607,48" marker-end="url(#ah)"/>
+        <path class="flow" d="M550,180 C580,180 580,123 607,123" marker-end="url(#ah)"/>
+        <path class="flow" d="M550,182 C580,182 580,196 607,196" marker-end="url(#ah)"/>
+        <path class="flow" d="M550,184 C580,184 580,270 607,270" marker-end="url(#ah)"/>
+        <path class="flow" d="M695,147 L695,167" marker-end="url(#ah)"/>
+        <path class="flow" d="M695,222 L695,242" marker-end="url(#ah)"/>
+        <path class="flow" d="M780,121 C800,108 805,128 818,135" marker-end="url(#ah)"/>
+        <path class="flow" d="M780,46 C805,46 815,118 818,124" marker-end="url(#ah)"/>
+        <path class="flow" d="M695,297 L695,316" marker-end="url(#ah)"/>
+      </svg>
+    </div>
+    <p class="foot-note">Every EDGAR / FRED / Polygon / extractor response is keyed into a 24-hour SQLite cache — so eval runs are reproducible and the metered APIs aren't hammered.</p>
+  </section>
+
+  <!-- 5 — THE CONTRACT -->
+  <section class="slide">
+    <span class="kicker"><span class="n">04</span> · The centrepiece</span>
+    <h2>The citation contract: <span class="hl">cite the span, or drop the claim</span></h2>
+    <p class="lede">The 10-K extractor calls Claude Sonnet 4.5 with the Anthropic Citations API.
+      Its output is filtered through a contract no model output can bypass.</p>
+    <div class="ba">
+      <div class="col bad">
+        <h3><span class="tag red">demoted</span> uncited model output</h3>
+        <p class="quote infer">"[INFERENCE] Apple may face increased regulatory scrutiny in the EU over App Store policies."</p>
+        <p class="citebar">→ moved to <code>notes</code>, prefixed [INFERENCE] — never a fact.</p>
+      </div>
+      <div class="col good">
+        <h3><span class="tag green">shipped</span> citation-grounded claim</h3>
+        <p class="quote fact">"The Company's business depends on the timely receipt and successful integration of components from third-party manufacturers."</p>
+        <p class="citebar">→ <code>CitedClaim</code> + ≥1 Citation span · AAPL 10-K FY2025 Item 1A</p>
+      </div>
+    </div>
+    <div class="pipeline">
+      <span class="step">model output</span><span class="ar">→</span>
+      <span class="step k">has Citations API span?</span><span class="ar">→</span>
+      <span class="step k">span verbatim in source?</span><span class="ar">→</span>
+      <span class="step" style="border-color:rgba(46,224,138,0.45);background:rgba(46,224,138,0.1);color:#9af0c4">CitedClaim ✓</span>
+      <span class="ar">·else·</span>
+      <span class="step" style="border-color:rgba(255,93,108,0.45);background:rgba(255,93,108,0.1);color:#ffb9bf">dropped / [INFERENCE]</span>
+    </div>
+    <p class="foot-note">ADR 0003 · SEC 17a-4 / FINRA 4511 expect verifiable lineage from any model artifact to the source filing.</p>
+  </section>
+
+  <!-- 6 — THE CARD -->
+  <section class="slide">
+    <span class="kicker"><span class="n">05</span> · The output</span>
+    <h2>What the analyst <span class="hl">actually sees</span></h2>
+    <p class="lede">The <code>tenk.extract_section</code> result renders inline as an MCP Apps card —
+      facts with clickable SEC citation pills; speculation parked in notes.</p>
+    <div class="grid2" style="grid-template-columns:1.25fr 1fr;align-items:start">
+      <div class="cardmock">
+        <div class="ch1">Apple Inc.</div>
+        <div class="csub">CIK 0000320193 · AAPL 10-K FY2025 Item 1A</div>
+        <h4>Facts</h4>
+        <div class="fact">The Company's business depends on the timely receipt and successful integration of components and finished products from third-party manufacturers.
+          <br /><span class="cpill">↗ The Company's business depends on the timely…</span></div>
+        <div class="fact">The Company is exposed to global macroeconomic conditions, including inflation, interest rates, and foreign exchange fluctuations.
+          <br /><span class="cpill">↗ exposed to global macroeconomic conditions…</span></div>
+        <div class="cfoot">
+          <span>model: claude-sonnet-4-5</span><span>citations: 2 / 2</span><span>cost: $0.0000</span>
+        </div>
+      </div>
+      <div class="mockside">
+        <div class="card"><h3>🔗 Citation pills</h3><p>Each pill carries the cited span and a <code>cgi-bin/browse-edgar</code> URL — one click to the SEC source.</p></div>
+        <div class="mocknote">
+          <div class="lab">NOTES — NOT SURFACED AS FACT</div>
+          <p>[INFERENCE] Apple may face increased regulatory scrutiny in the EU over App Store policies.</p>
+        </div>
+        <div class="card"><h3>📦 Content-addressed</h3><p>The React bundle ships with a SHA-256 digest in the UI envelope, so hosts can detect source-vs-artifact drift.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 — OAUTH -->
+  <section class="slide">
+    <span class="kicker"><span class="n">06</span> · Security</span>
+    <h2>OAuth 2.1 — a <span class="hl">resource server</span>, never an IdP</h2>
+    <p class="lede">Per MCP spec 2025-11-25, an authenticated MCP server is a resource server.
+      It validates JWTs minted by an external IdP — it never mints them itself.</p>
+    <div class="grid3">
+      <div class="card"><h3>🎫 RFC 6750 validation</h3><p>Full bearer-token validation: issuer, audience, expiry, signature against the configured JWKS. <span class="num">auth/oauth.py</span></p></div>
+      <div class="card"><h3>🔒 Algorithm allowlist</h3><p>PyJWT is pinned to an explicit <code>algorithms=</code> set — closing the <code>alg=none</code> and key-confusion attacks of RFC 8725. <span class="num">ADR 0005</span></p></div>
+      <div class="card"><h3>🚪 Per-request gate</h3><p>ASGI middleware authenticates <em>every</em> HTTP request to the server — a clean 401 with <code>WWW-Authenticate</code> on failure. <span class="num">ADR 0004</span></p></div>
+    </div>
+    <div class="checks">
+      <div class="check"><span class="c">✓</span><span>External IdP only — Auth0 / Authentik / Keycloak. No public keys hardcoded; embedding an IdP would widen the attack surface.</span></div>
+      <div class="check"><span class="c">✓</span><span>A dev-token CLI minter exists for local testing, <b>gated on a local issuer URL</b> so it can't be mistaken for production auth.</span></div>
+    </div>
+  </section>
+
+  <!-- 8 — DATA TOOLS / FAIR ACCESS -->
+  <section class="slide">
+    <span class="kicker"><span class="n">07</span> · Data discipline</span>
+    <h2>Good-citizen clients: <span class="hl">Fair Access, rate limits, caching</span></h2>
+    <p class="lede">EDGAR, FRED, and Polygon share one design — because SEC Fair Access, a spend
+      cap, and eval reproducibility all force it.</p>
+    <div class="grid3">
+      <div class="card"><h3>🪪 EDGAR Fair Access</h3><p>Every SEC request carries a contact <code>User-Agent</code>; the process is rate-limited to <b>≤ 10 req/sec</b> across all callers. <span class="num">ADR 0006</span></p></div>
+      <div class="card"><h3>♻️ 24-hour cache</h3><p>A shared SQLite response cache with 24h TTL — eval runs replay identically and the metered APIs aren't burned. <span class="num">tools/cache.py</span></p></div>
+      <div class="card"><h3>🔁 Retries + backoff</h3><p>Tenacity-backed exponential retry on 429 / transient errors — verified by tests asserting concurrency stays under the rate ceiling.</p></div>
+    </div>
+    <div class="checks">
+      <div class="check"><span class="c">✓</span><span><b>Spend cap.</b> <code>MAX_API_SPEND_USD</code> is enforced inside the extractor <em>and</em> the eval harness — not just on a dashboard.</span></div>
+      <div class="check"><span class="c">✓</span><span><b>House rules.</b> No <code>requests</code>, no <code>print()</code>, no <code>subprocess(shell=True)</code>, no bare <code>except</code> — anywhere in the codebase.</span></div>
+    </div>
+  </section>
+
+  <!-- 9 — EVAL HARNESS -->
+  <section class="slide">
+    <span class="kicker"><span class="n">08</span> · Proof, not vibes</span>
+    <h2>A deterministic eval harness <span class="hl">gates every change</span></h2>
+    <p class="lede">Offline fixtures make CI free and replayable; a live path scores real filings.
+      A paired LLM judge sits on top of deterministic metrics — never instead of them.</p>
+    <div class="grid4">
+      <div class="card"><h3>⚙️ exec-accuracy</h3><p>Deterministic structural match of tool output vs. expected.</p></div>
+      <div class="card"><h3>🔗 citation coverage</h3><p>Share of facts carrying a valid citation — must equal 1.00 for <code>tenk.*</code>.</p></div>
+      <div class="card"><h3>⚖️ Opus 4.7 judge</h3><p>A five-axis rubric scored by Claude Opus 4.7, replayable per case.</p></div>
+      <div class="card"><h3>💰 budget gates</h3><p><code>--budget</code> and <code>--min-judge-score</code> abort before spend or quality slips.</p></div>
+    </div>
+    <table>
+      <thead><tr><th>Run</th><th>Pass</th><th>exec-acc</th><th>citation</th><th>judge</th><th>cost</th></tr></thead>
+      <tbody>
+        <tr><td>Offline full <span class="mono">(--offline)</span></td><td class="ok">5 / 5</td><td class="ok">1.00</td><td class="ok">1.00</td><td class="ok">1.00</td><td class="ok">$0.00</td></tr>
+        <tr><td>Live full <span class="mono">(--budget 5)</span></td><td class="ok">5 / 5</td><td>0.80</td><td class="ok">1.00</td><td class="ok">0.93</td><td>$0.08</td></tr>
+      </tbody>
+    </table>
+    <p class="foot-note">CI runs the offline smoke gate on every PR; a nightly workflow runs the live suite and posts a sticky eval-delta comment. <span class="mono">git b8a4ba3</span></p>
+  </section>
+
+  <!-- 10 — ENGINEERING RIGOR -->
+  <section class="slide">
+    <span class="kicker"><span class="n">09</span> · How it's built</span>
+    <h2>Production hygiene, <span class="hl">enforced — not aspired to</span></h2>
+    <p class="lede">The gates below run in CI. A pull request that misses any one of them does not merge.</p>
+    <div class="grid4">
+      <div class="tile"><div class="v">~87%</div><div class="l">test coverage</div><div class="sub">85% hard gate</div></div>
+      <div class="tile"><div class="v">strict</div><div class="l">mypy typing</div><div class="sub">whole of src/</div></div>
+      <div class="tile"><div class="v">28</div><div class="l">test suites</div><div class="sub">120+ unit tests</div></div>
+      <div class="tile"><div class="v">9</div><div class="l">ADRs</div><div class="sub">every deviation</div></div>
+    </div>
+    <div class="checks">
+      <div class="check"><span class="c">✓</span><span><b>CI pipeline</b> — ruff lint + format, mypy <code>--strict</code>, pytest with an 85% coverage floor, and an offline smoke eval, on every push.</span></div>
+      <div class="check"><span class="c">✓</span><span><b>Decision records</b> — nine MADR architecture decisions, so any non-default behaviour traces to a one-page rationale.</span></div>
+      <div class="check"><span class="c">✓</span><span><b>Roughly 7.4k lines</b> across the package and a near-1:1 test ratio — <span class="mono">~4.1k src · ~3.3k tests</span>.</span></div>
+    </div>
+  </section>
+
+  <!-- 11 — STACK -->
+  <section class="slide">
+    <span class="kicker"><span class="n">10</span> · The stack</span>
+    <h2>Modern, typed, <span class="hl">async-first Python</span></h2>
+    <div class="grid3">
+      <div class="card"><h3>🧩 Protocol layer</h3><p><code>fastmcp</code> + <code>mcp</code> on streamable HTTP, Starlette ASGI middleware, MCP spec 2025-11-25.</p></div>
+      <div class="card"><h3>🌐 Data layer</h3><p><code>httpx</code> async clients, <code>tenacity</code> retries, a SQLite response cache, Pydantic v2 models throughout.</p></div>
+      <div class="card"><h3>🤖 Intelligence layer</h3><p>Anthropic SDK — Sonnet 4.5 extractor via the Citations API, Opus 4.7 as the eval judge.</p></div>
+      <div class="card"><h3>🔐 Auth layer</h3><p><code>authlib</code> + <code>PyJWT[crypto]</code> for RFC 6750 resource-server validation against a JWKS.</p></div>
+      <div class="card"><h3>📊 Observability</h3><p><code>structlog</code> structured logging — bound context on every tool call, no stray <code>print()</code>.</p></div>
+      <div class="card"><h3>🛠️ Tooling</h3><p><code>uv</code> for env + lock, <code>ruff</code>, <code>mypy</code>, <code>pytest</code>, pre-commit, Docker, GitHub Actions.</p></div>
+    </div>
+  </section>
+
+  <!-- 12 — DEMO -->
+  <section class="slide">
+    <span class="kicker"><span class="n">11</span> · See it run</span>
+    <h2>A four-beat <span class="hl">story demo</span>, fully offline</h2>
+    <p class="lede">One command builds a single-tab story hub — no terminal juggling, deterministic,
+      safe to record. <code>make demo-start</code>.</p>
+    <div class="grid4">
+      <div class="card"><h3>1 · The ask</h3><p>An analyst asks for AAPL Item 1A risks for a diligence memo.</p></div>
+      <div class="card"><h3>2 · The answer</h3><p>The TenKSummaryCard renders with live, clickable SEC citation pills.</p></div>
+      <div class="card"><h3>3 · The proof</h3><p>Speculation parked in notes; eval metrics at 1.0, $0.00, offline.</p></div>
+      <div class="card"><h3>4 · The stack</h3><p>Architecture strip, green CI badge, repo link for the close.</p></div>
+    </div>
+    <div class="checks">
+      <div class="check"><span class="c">▸</span><span><b>Run it:</b> <code>make demo-start</code> opens the polished hub · <code>make demo-video-script</code> prints the teleprompter.</span></div>
+      <div class="check"><span class="c">▸</span><span><b>Live option:</b> swap beat 2 for a real Cursor inline card — see <code>docs/demo/cursor-mcp-setup.md</code>.</span></div>
+    </div>
+  </section>
+
+  <!-- 13 — RESULTS -->
+  <section class="slide">
+    <span class="kicker"><span class="n">12</span> · Where it landed</span>
+    <h2>v0.1.0 — <span class="hl">shipped and measured</span></h2>
+    <p class="lede">The W1 milestone closed with every gate green and the eval table populated from
+      real runs — not placeholders.</p>
+    <div class="grid4">
+      <div class="tile"><div class="v">1.00</div><div class="l">citation coverage</div><div class="sub">offline & live</div></div>
+      <div class="tile"><div class="v">0.93</div><div class="l">live judge score</div><div class="sub">target ≥ 0.85</div></div>
+      <div class="tile"><div class="v">$0.08</div><div class="l">cost / live run</div><div class="sub">budget $5.00</div></div>
+      <div class="tile"><div class="v">&lt;1ms</div><div class="l">P50 smoke latency</div><div class="sub">offline path</div></div>
+    </div>
+    <div class="checks">
+      <div class="check"><span class="c">✓</span><span><b>Reproducible.</b> <code>uv run python -m mcp_financial_data.evals.harness --full --offline</code> reproduces the offline table on any machine.</span></div>
+      <div class="check"><span class="c">✓</span><span><b>Honest.</b> Live MSFT XBRL multi-row matching scores 0.80 exec-accuracy — tracked openly in follow-on issues, not hidden.</span></div>
+    </div>
+  </section>
+
+  <!-- 14 — CLOSE -->
+  <section class="slide cover">
+    <span class="kicker"><span class="n">13</span> · Recap</span>
+    <h1>Citations are not a feature here.<br /><span class="hl">They are the contract.</span></h1>
+    <div class="closegrid">
+      <div>
+        <div class="checks" style="margin-top:0.4rem">
+          <div class="check"><span class="c">✓</span><span>An MCP server real clients can connect to — OAuth 2.1, spec 2025-11-25.</span></div>
+          <div class="check"><span class="c">✓</span><span>A 10-K extractor where every claim traces to a verifiable SEC span.</span></div>
+          <div class="check"><span class="c">✓</span><span>A deterministic, replayable eval harness gating every change in CI.</span></div>
+          <div class="check"><span class="c">✓</span><span>~7.4k lines, ~87% covered, mypy-strict, 9 ADRs, MIT-licensed.</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>📂 Explore</h3>
+        <div class="linkrow"><span>repo</span><a href="https://github.com/SebAustin/mcp-financial-data" target="_blank" rel="noopener">github.com/SebAustin/mcp-financial-data</a></div>
+        <div class="linkrow"><span>start</span><a>git clone · make setup · make ci</a></div>
+        <div class="linkrow"><span>demo</span><a>make demo-start</a></div>
+        <p class="foot-note" style="margin-top:1rem">Quickstart, architecture, and all nine ADRs live in <code>docs/</code> and <code>README.md</code>.</p>
+      </div>
+    </div>
+    <p class="eyebrow">Thanks for reading · press <kbd style="font-family:var(--mono)">O</kbd> for the slide overview</p>
+  </section>
+
+</div>
+
+<div class="dots" id="dots"></div>
+<div class="hint"><kbd>←</kbd> <kbd>→</kbd> navigate · <kbd>O</kbd> overview</div>
+
+<div class="overview" id="overview">
+  <h3>Slide overview — click to jump</h3>
+  <div class="ovgrid" id="ovgrid"></div>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll(".slide"));
+  const dotsEl = document.getElementById("dots");
+  const bar = document.getElementById("bar");
+  const curEl = document.getElementById("cur");
+  const totalEl = document.getElementById("total");
+  const overview = document.getElementById("overview");
+  const ovgrid = document.getElementById("ovgrid");
+  let current = 0;
+  totalEl.textContent = String(slides.length);
+
+  const titles = [
+    "Cover", "The problem", "What it is", "Architecture", "The citation contract",
+    "The output card", "OAuth 2.1 security", "Data discipline", "Eval harness",
+    "Engineering rigor", "The stack", "Story demo", "Results — v0.1.0", "Recap & close"
+  ];
+
+  slides.forEach((_, i) => {
+    const b = document.createElement("button");
+    b.setAttribute("aria-label", "Slide " + (i + 1));
+    b.onclick = () => show(i);
+    dotsEl.appendChild(b);
+
+    const c = document.createElement("div");
+    c.className = "ovcard";
+    c.innerHTML = '<div class="ovn">' + String(i + 1).padStart(2, "0") + '</div><div class="ovt">' + titles[i] + '</div>';
+    c.onclick = () => { show(i); toggleOverview(false); };
+    ovgrid.appendChild(c);
+  });
+  const dotBtns = Array.from(dotsEl.children);
+
+  function show(n) {
+    current = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, i) => s.classList.toggle("active", i === current));
+    dotBtns.forEach((d, i) => d.classList.toggle("active", i === current));
+    bar.style.width = (((current + 1) / slides.length) * 100) + "%";
+    curEl.textContent = String(current + 1);
+  }
+  function toggleOverview(force) {
+    const showIt = force === undefined ? !overview.classList.contains("show") : force;
+    overview.classList.toggle("show", showIt);
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") { e.preventDefault(); show(current + 1); }
+    else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); show(current - 1); }
+    else if (e.key === "Home") { show(0); }
+    else if (e.key === "End") { show(slides.length - 1); }
+    else if (e.key.toLowerCase() === "o") { toggleOverview(); }
+    else if (e.key === "Escape") { toggleOverview(false); }
+    else if (/^[1-9]$/.test(e.key)) { show(parseInt(e.key, 10) - 1); }
+  });
+  let sx = 0;
+  document.addEventListener("touchstart", (e) => { sx = e.changedTouches[0].clientX; }, { passive: true });
+  document.addEventListener("touchend", (e) => {
+    const dx = e.changedTouches[0].clientX - sx;
+    if (Math.abs(dx) > 50) show(current + (dx < 0 ? 1 : -1));
+  }, { passive: true });
+  show(0);
+</script>
+</body>
+</html>

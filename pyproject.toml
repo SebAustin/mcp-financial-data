@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "MCP server for SEC EDGAR + FRED + Polygon with OAuth 2.1, Claude-powered 10-K extraction, and MCP Apps inline UI."
 readme = "README.md"
 license = { text = "MIT" }
-authors = [{ name = "Sebastien Henry", email = "sebastien.henry@example.com" }]
+authors = [{ name = "Sebastien Henry", email = "henry.sebastien1982@gmail.com" }]
 requires-python = ">=3.12,<3.13"
 keywords = ["mcp", "anthropic", "claude", "sec-edgar", "fred", "polygon", "fsi", "10-k"]
 classifiers = [
@@ -108,6 +108,7 @@ ignore = [
 "tests/**" = ["S101", "ANN", "T20", "PT011"]
 "evals/**" = ["T20"]
 "scripts/**" = ["T20", "S603", "ANN"]
+"src/mcp_financial_data/demo/hub.py" = ["E501"]
 ".github/scripts/**" = ["T20"]
 
 [tool.ruff.lint.isort]

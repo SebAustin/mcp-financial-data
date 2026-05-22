@@ -79,6 +79,7 @@ CLAUDE.local.md
 *.mov
 *.gif
 recordings/
+recordings/demo/
 
 # Docker
 .docker/

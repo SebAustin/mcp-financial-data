@@ -19,19 +19,20 @@
 
 ## Demo
 
-**Video (90s):** _Paste your recording URL here after filming._
+Start with the [interactive deck](docs/presentation.html) for the full walkthrough,
+or run `make demo-start` for the offline story hub. A 2-minute video walkthrough is
+on the way.
 
 | Step | Command |
 | --- | --- |
-| Prep | `make demo-video` — smoke eval + browser preview + scene checklist |
-| Script | [`docs/demo/video-script.md`](docs/demo/video-script.md) — teleprompter with 5 scenes |
-| Record | `make demo-video-card` → `make demo-video-audit` → `make demo-video-oauth` |
-| Server | `make serve` in a separate terminal for the OAuth scene |
+| Present | [`docs/presentation.html`](docs/presentation.html) — 14-slide interactive project deck (open in any browser; `←` `→` to navigate, `O` for overview). PowerPoint version: [`docs/mcp-financial-data-presentation.pptx`](docs/mcp-financial-data-presentation.pptx) |
+| Record | `make demo-start` — single-browser story hub (4 slides, offline) |
+| Script | [`docs/demo/video-script.md`](docs/demo/video-script.md) — slide-synced teleprompter |
+| Live MCP | [`docs/demo/cursor-mcp-setup.md`](docs/demo/cursor-mcp-setup.md) — optional Cursor appendix |
 
-**Story arc:** problem (bad citations) → TenKSummaryCard with SEC pills → offline
-eval metrics at 1.0 → OAuth 401→200 → green CI.
+**Story:** analyst asks for AAPL Item 1A risks → cited TenKSummaryCard → eval proof at 1.0 → stack + CI.
 
-Legacy curl-based Loom notes: [`docs/demo/loom-tenk-summary-card.md`](docs/demo/loom-tenk-summary-card.md)
+Legacy multi-terminal flow: `make demo-video` · [`loom-tenk-summary-card.md`](docs/demo/loom-tenk-summary-card.md)
 
 ## Why this exists
 
@@ -48,22 +49,66 @@ Every one of these is a hard constraint in this repo, enforced in CI.
 
 ## Architecture
 
+Every request crosses the OAuth 2.1 boundary before anything runs; every external
+fetch is rate-limited and cached; every `tenk.*` claim is citation-grounded before it
+leaves the server. Thick arrows are the live request path, dotted arrows are control
+or replay paths.
+
 ```mermaid
 flowchart LR
-    Client["MCP Client (Claude Desktop / Cursor / Goose)"] -->|"OAuth 2.1 + PKCE"| Server[FastMCP Server]
-    Server --> EDGAR[EDGAR async client]
-    Server --> FRED[FRED async client]
-    Server --> Polygon[Polygon.io async client]
-    Server --> Extractor["10-K Extractor"]
-    Server --> Apps["MCP Apps inline UI"]
-    Server --> Evals["Eval harness"]
-    Extractor -->|"Claude Sonnet 4.5 + Citations API"| Anthropic[Anthropic Messages API]
-    Evals -->|"Claude Opus 4.7 judge"| Anthropic
-    EDGAR --> Cache[(SQLite response cache 24h TTL)]
+    C["MCP Client<br/>Claude Desktop · Cursor · Goose"]
+    OAuth["OAuth 2.1 Resource Server<br/>JWT validation · alg allowlist · PKCE"]
+
+    subgraph core["FastMCP Server — MCP spec 2025-11-25"]
+        Router["Tool router +<br/>MCP Apps registry"]
+        EDGAR["edgar.list_filings<br/>edgar.company_facts"]
+        FRED["fred.series"]
+        Polygon["polygon.aggregates"]
+        Extractor["tenk.extract_section<br/>citation-grounded 10-K"]
+        UI["TenKSummaryCard<br/>inline UI · citation pills"]
+        Evals["Eval harness<br/>smoke · full · offline"]
+    end
+
+    Cache[("SQLite cache · 24h TTL")]
+    Anthropic["Anthropic Messages API"]
+
+    C ==>|"Bearer JWT"| OAuth
+    OAuth -.->|"401 + WWW-Authenticate"| C
+    OAuth ==>|"authenticated"| Router
+    Router --> EDGAR
+    Router --> FRED
+    Router --> Polygon
+    Router --> Extractor
+    Extractor --> UI
+    Extractor ==>|"Sonnet 4.5 + Citations API"| Anthropic
+    Evals ==>|"Opus 4.7 judge"| Anthropic
+    Evals -.->|"replays tool calls"| Router
+    EDGAR --> Cache
     FRED --> Cache
     Polygon --> Cache
     Extractor --> Cache
+
+    classDef client fill:#15324f,stroke:#4f8cff,color:#eaf1ff
+    classDef gate fill:#3a2c12,stroke:#ffb347,color:#ffe9c7
+    classDef tool fill:#16233a,stroke:#2d3a4f,color:#dce6f5
+    classDef key fill:#1d2f4d,stroke:#4f8cff,color:#eaf1ff
+    classDef store fill:#16301f,stroke:#2ee08a,color:#d6f5e3
+    classDef ext fill:#271d3d,stroke:#9b86ff,color:#ece6ff
+
+    class C client
+    class OAuth gate
+    class Router,EDGAR,FRED,Polygon,UI tool
+    class Extractor,Evals key
+    class Cache store
+    class Anthropic ext
 ```
+
+| Node style | Meaning |
+| --- | --- |
+| Amber gate | OAuth 2.1 boundary — validated on every request |
+| Blue (filled) | Citation-grounded extractor + eval harness — the audited paths |
+| Green store | 24-hour SQLite response cache — keeps eval runs reproducible |
+| Purple | External Anthropic Messages API (Sonnet 4.5 extract, Opus 4.7 judge) |
 
 ## Quickstart
 

@@ -2,17 +2,16 @@
 """Guided video demo for mcp-financial-data.
 
 Usage:
-    make demo-video          # prep everything + print scene checklist
-    make demo-video-card     # open TenKSummaryCard in browser
-    make demo-video-oauth    # labeled 401 → 200 (server must be running)
-    make demo-video-audit    # pretty-print latest smoke eval summary
-    make demo-video-script   # teleprompter for recording
+    make demo-start        # recommended — story hub in browser (single window)
+    make demo-video        # legacy prep checklist
+    make demo-video-script # teleprompter for recording
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import socket
 import subprocess
 import sys
 import textwrap
@@ -23,6 +22,7 @@ from typing import Any, Final
 
 import httpx
 
+from mcp_financial_data.demo.hub import build_demo_hub, default_hub_dir
 from mcp_financial_data.demo.preview import build_tenk_preview_html
 from mcp_financial_data.settings import get_settings
 
@@ -64,6 +64,96 @@ def _run_smoke_eval() -> Path:
     return summaries[0]
 
 
+DEFAULT_HUB_PORT: Final[int] = 8766
+
+TELEPROMPTER_SLIDES: Final[list[tuple[str, str]]] = [
+    (
+        "Slide 1 — The ask",
+        "An analyst needs Apple 10-K Item 1A risks for a diligence memo — "
+        "every claim must trace to the filing.",
+    ),
+    (
+        "Slide 2 — The answer",
+        "tenk.extract_section returns only cited facts. Click a pill — it opens "
+        "SEC EDGAR. Uncited output never appears on this card.",
+    ),
+    (
+        "Slide 3 — The proof",
+        "INFERENCE stays in notes, never on the card. CI scores exec-accuracy "
+        "and citation coverage — all ones, offline, zero dollars.",
+    ),
+    (
+        "Slide 4 — The stack",
+        "MCP 2025-11-25, OAuth resource server, Sonnet 4.5 Citations API, "
+        "Opus 4.7 judge, smoke eval on every PR.",
+    ),
+]
+
+
+def _print_teleprompter_slides() -> None:
+    _banner("Teleprompter — advance slides with ← → in the browser")
+    for title, say in TELEPROMPTER_SLIDES:
+        print(f"\n  {title}")
+        print(f"  SAY: {say}")
+    print(f"\n  Full script: {SCRIPT_DOC}\n")
+
+
+def _serve_directory(
+    directory: Path,
+    *,
+    preferred_port: int,
+    max_attempts: int = 20,
+) -> tuple[ThreadingHTTPServer, int]:
+    """Bind a static file server, advancing the port if the preferred one is taken."""
+
+    class _Handler(SimpleHTTPRequestHandler):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, directory=str(directory), **kwargs)
+
+    last_err: OSError | None = None
+    for offset in range(max_attempts):
+        port = preferred_port + offset
+        try:
+            server = ThreadingHTTPServer(("127.0.0.1", port), _Handler)
+            server.allow_reuse_address = True
+            if offset > 0:
+                print(
+                    f"Port {preferred_port} in use; serving on {port} instead.",
+                    file=sys.stderr,
+                )
+            return server, port
+        except OSError as exc:
+            if exc.errno not in {48, 98} and not isinstance(exc, socket.gaierror):
+                raise
+            last_err = exc
+    end = preferred_port + max_attempts - 1
+    msg = f"No free port in range {preferred_port}-{end}"
+    raise OSError(last_err.errno if last_err else 48, msg) from last_err
+
+
+def cmd_start(*, port: int = DEFAULT_HUB_PORT, open_browser: bool = True) -> int:
+    _banner("Story demo hub")
+    print("Running offline smoke eval…")
+    summary_path = _run_smoke_eval()
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    hub_path = build_demo_hub(repo_root=ROOT, eval_summary=summary)
+    hub_dir = default_hub_dir().resolve()
+
+    _print_teleprompter_slides()
+    server, bound_port = _serve_directory(hub_dir, preferred_port=port)
+    url = f"http://127.0.0.1:{bound_port}/{hub_path.name}"
+    print(f"Serving {hub_dir}")
+    print(f"Open: {url}\nPress Ctrl+C to stop.\n")
+
+    if open_browser:
+        webbrowser.open(url)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopped demo hub.")
+    return 0
+
+
 def cmd_prep() -> int:
     _banner("Demo prep")
     print("Running offline smoke eval…")
@@ -74,13 +164,12 @@ def cmd_prep() -> int:
     print(
         textwrap.dedent(
             f"""
-            Ready to record. Open two windows:
+            Ready to record (legacy flow). Prefer: make demo-start
 
-              Window 1 — Browser
-                file://{preview_path}
-                (or run: make demo-video-card)
+              Recommended — single browser window:
+                make demo-start
 
-              Window 2 — Terminal
+              Legacy multi-window:
                 make serve              # Terminal A (leave running)
                 make demo-video-oauth   # Scene 4 (after server is up)
                 make demo-video-audit   # Scene 3 metrics
@@ -102,15 +191,10 @@ def cmd_card(*, open_browser: bool = True, serve: bool = False, port: int = 8766
     preview_dir = preview_path.parent
 
     if serve:
-        _banner(f"Serving preview at http://127.0.0.1:{port}/{preview_path.name}")
+        server, bound_port = _serve_directory(preview_dir, preferred_port=port)
+        url = f"http://127.0.0.1:{bound_port}/{preview_path.name}"
+        _banner(f"Serving preview at {url}")
         print("Press Ctrl+C to stop.\n")
-
-        class _Handler(SimpleHTTPRequestHandler):
-            def __init__(self, *args: Any, **kwargs: Any) -> None:
-                super().__init__(*args, directory=str(preview_dir), **kwargs)
-
-        server = ThreadingHTTPServer(("127.0.0.1", port), _Handler)
-        url = f"http://127.0.0.1:{port}/{preview_path.name}"
         if open_browser:
             webbrowser.open(url)
         try:
@@ -210,6 +294,10 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="cmd", required=True)
 
+    p_start = sub.add_parser("start", help="Build story hub, serve, open browser")
+    p_start.add_argument("--port", type=int, default=DEFAULT_HUB_PORT)
+    p_start.add_argument("--no-open", action="store_true")
+
     sub.add_parser("prep", help="Run smoke eval + build preview + print checklist")
     p_card = sub.add_parser("card", help="Build and open TenKSummaryCard preview")
     p_card.add_argument("--no-open", action="store_true", help="Skip opening the browser")
@@ -228,6 +316,8 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    if args.cmd == "start":
+        return cmd_start(port=args.port, open_browser=not args.no_open)
     if args.cmd == "prep":
         return cmd_prep()
     if args.cmd == "card":
