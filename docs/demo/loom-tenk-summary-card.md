@@ -1,33 +1,63 @@
-# Loom demo script — TenK Summary Card (MCP Apps)
+# Loom demo — mcp-financial-data v0.1.0
 
-Target length: **~60 seconds**. Record after PR #10 is on `main` and secrets are loaded.
+Target length: **60 seconds**. Three takes max. Record at 1080p (OBS or Loom
+desktop). Use a wired mic.
 
-## Prerequisites
+## Prep (run before rolling)
 
 ```bash
-cp .env.example .env
-# Set: ANTHROPIC_API_KEY, EDGAR_USER_AGENT="Your Name <you@example.com>"
+make demo-prep   # smoke eval + prints copy-paste terminal commands
+```
+
+Ensure `.env` has at least:
+
+- `ANTHROPIC_API_KEY` (only if you demo a **live** extractor call; offline eval
+  does not need it)
+- `MCP_OAUTH_DEV_SECRET` (any local-only string) for `make oauth-dev`
+- `EDGAR_USER_AGENT="Your Name <you@example.com>"` if you hit EDGAR tools on camera
+
+```bash
+# Terminal A
 make serve
+
+# Terminal B — follow the commands printed by make demo-prep
 ```
 
-In Cursor (or Claude Desktop), add the MCP server URL from `.env` (`MCP_HOST` / `MCP_PORT`).
-Complete the OAuth dev round-trip if prompted:
+Connect Cursor or Claude Desktop to `http://127.0.0.1:8765` (or your
+`MCP_HOST` / `MCP_PORT`). Paste the dev Bearer token when prompted.
 
-```bash
-make oauth-dev   # paste Bearer token when the client asks
-```
+## Scene timings
 
-## Beat sheet (60s)
+| Time | Scene | Voiceover | Visual |
+| --- | --- | --- | --- |
+| 0:00–0:08 | Title | MCP server for SEC EDGAR, FRED, and Polygon with a citation-grounded 10-K extractor. | README architecture diagram (Sonnet 4.5 extractor + Opus 4.7 eval judge). |
+| 0:08–0:18 | OAuth | MCP client connects over OAuth 2.1; JWTs validated against JWKS (dev HS256 locally). | `make oauth-dev`, then `curl` without token → **401**, with token → authorized **POST /mcp**. |
+| 0:18–0:35 | Tool call | Call `tenk.extract_section` on AAPL Item 1A. Claude Sonnet 4.5 returns citation-grounded facts via the Citations API. | Inline **TenKSummaryCard**: hover a pill → SEC EDGAR browse URL. |
+| 0:35–0:48 | Audit trail | Every surfaced fact has citations; uncited spans stay in `notes`. Smoke eval records exec-accuracy and citation coverage at 1.0 offline. | `cat evals/runs/<latest>/summary.json` from `make demo-prep`. |
+| 0:48–0:60 | Close | CI smoke eval on every PR; nightly full eval live with a $5 cap. Repo: github.com/SebAustin/mcp-financial-data. | GitHub Actions green + sticky eval-delta PR comment. |
 
-| Time | On screen | Narration |
-|------|-----------|-----------|
-| 0–10s | Cursor MCP settings → connected server | "Streamable-HTTP MCP server with OAuth 2.1 resource-server validation." |
-| 10–25s | Tool list showing `tenk.extract_section` | "Tool advertises `ui://mcp-financial-data/tenk-summary-card` for inline rendering." |
-| 25–45s | Call `tenk.extract_section` with Apple CIK + Item 1A snippet | "Extractor uses Anthropic Citations API — every fact carries a citation." |
-| 45–55s | **TenKSummaryCard** inline: header, facts, citation pills | "Click a pill — SEC EDGAR browse URL. Footer shows model, tokens, cost, latency." |
-| 55–60s | Expand one citation / show `resources/read` in logs (optional) | "Bundle ships via `resources/read` and content-addressed SHA-256 in the envelope." |
+## Voiceover (read at ~175 wpm)
 
-## Sample tool arguments
+> mcp-financial-data is an MCP server — spec 2025-11-25 — for SEC EDGAR,
+> FRED, and Polygon, with a citation-grounded 10-K extractor.
+>
+> The MCP client connects over OAuth 2.1. JWTs are validated against the
+> configured JWKS — wrong audience or an expired token returns a
+> standards-clean 401 with `WWW-Authenticate: Bearer error=invalid_token`.
+>
+> I'll call `tenk.extract_section` on Apple's 10-K Item 1A. Claude Sonnet
+> 4.5 returns citation-grounded risk factors tied to the source filing.
+> Hover any pill — it opens the SEC filing at the cited passage.
+>
+> Every fact on the card carries at least one citation; uncited model output
+> is dropped, never surfaced as a fact. The smoke eval summary records
+> exec-accuracy 1.0 and citation coverage 1.0 offline.
+>
+> CI runs the smoke eval on every PR. Nightly runs the full suite against
+> live APIs with a five-dollar spend cap. Repo at
+> github.com/SebAustin/mcp-financial-data.
+
+## Sample `tenk.extract_section` arguments
 
 ```json
 {
@@ -43,11 +73,19 @@ make oauth-dev   # paste Bearer token when the client asks
 
 ## What to highlight
 
-1. **Citation pills** — each links to `https://www.sec.gov/cgi-bin/browse-edgar?...`
-2. **No uncited facts** — `[INFERENCE]` items stay in `notes`, not the card
-3. **Spend cap** — mention `MAX_API_SPEND_USD` if you hit the limit during recording
+1. **Citation pills** — SEC `cgi-bin/browse-edgar` URLs from `apps/ui.py`
+2. **Footer** — model id, token counts, cost, latency
+3. **No uncited facts on the card** — `[INFERENCE]` items remain in `notes`
 
-## Post-recording
+## Anti-patterns
 
-- Link the Loom in README.md under a "Demo" section
-- Paste one smoke eval row from `evals/runs/*/summary.jsonl` into the README eval table
+- Do not show `.env` or API keys on camera.
+- Do not run `--full` live on camera (latency variance breaks timing).
+- Do not switch IDE themes mid-recording.
+
+## After recording
+
+1. Save video to `recordings/loom-v0.1.0-<date>.mp4` (gitignored).
+2. Paste the Loom URL into [README.md](../../README.md) **Demo** section.
+3. Pin the Loom link in the GitHub repo **About** panel.
+4. Optional: export a 30s silent GIF (OAuth → tool call → UI) for LinkedIn.

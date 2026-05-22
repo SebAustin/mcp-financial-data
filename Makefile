@@ -68,6 +68,10 @@ serve: ## Run the MCP server locally (streamable HTTP, port from env)
 oauth-dev: ## Print a dev OAuth 2.1 token for local CLI testing
 	$(UV) run python -m $(PKG).auth.oauth dev-token
 
+.PHONY: demo-prep
+demo-prep: ## Print Loom demo commands and refresh offline smoke eval
+	@bash scripts/loom_demo_prep.sh
+
 .PHONY: ui-build
 ui-build: ## Build TenKSummaryCard JS bundle (requires npm + public registry)
 	@if [ ! -f ui/tenk-summary-card/package.json ]; then \
