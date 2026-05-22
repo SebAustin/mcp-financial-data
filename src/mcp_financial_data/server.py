@@ -13,6 +13,8 @@ from typing import Any, Final
 
 from fastmcp import FastMCP
 from pydantic import BaseModel, ConfigDict, Field
+from starlette.middleware import Middleware
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from mcp_financial_data import __version__
 from mcp_financial_data.apps.ui import (
@@ -22,6 +24,7 @@ from mcp_financial_data.apps.ui import (
     read_resource_html,
     render_tenk_summary_card,
 )
+from mcp_financial_data.auth.oauth import oauth_dependency
 from mcp_financial_data.extractors.tenk import (
     ExtractionResult,
     TenKSection,
@@ -191,6 +194,26 @@ def build_app(settings: Settings | None = None) -> FastMCP[Any]:
     return mcp
 
 
+class _OAuthASGIMiddleware:
+    """Starlette middleware adapter for :func:`oauth_dependency`."""
+
+    def __init__(self: _OAuthASGIMiddleware, app: ASGIApp, *, settings: Settings) -> None:
+        self.app = oauth_dependency(settings)(app)
+
+    async def __call__(
+        self: _OAuthASGIMiddleware,
+        scope: Scope,
+        receive: Receive,
+        send: Send,
+    ) -> None:
+        await self.app(scope, receive, send)
+
+
+def oauth_middleware(settings: Settings) -> list[Middleware]:
+    """Return Starlette middleware that enforces OAuth 2.1 on every HTTP request."""
+    return [Middleware(_OAuthASGIMiddleware, settings=settings)]
+
+
 def main() -> None:
     """CLI entry point. Binds the streamable-HTTP transport to the configured port."""
     configure_logging()
@@ -203,7 +226,12 @@ def main() -> None:
         port=settings.mcp_port,
         transport="streamable-http",
     )
-    app.run(transport="http", host=settings.mcp_host, port=settings.mcp_port)
+    app.run(
+        transport="streamable-http",
+        host=settings.mcp_host,
+        port=settings.mcp_port,
+        middleware=oauth_middleware(settings),
+    )
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import httpx
 import pytest
 
 from mcp_financial_data.server import (
@@ -12,7 +13,39 @@ from mcp_financial_data.server import (
     ListFilingsInput,
     PolygonAggregatesInput,
     build_app,
+    oauth_middleware,
 )
+from mcp_financial_data.settings import get_settings
+
+_MCP_HEADERS = {
+    "content-type": "application/json",
+    "accept": "application/json, text/event-stream",
+}
+_INIT_BODY = {
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+        "protocolVersion": "2024-11-05",
+        "capabilities": {},
+        "clientInfo": {"name": "test", "version": "1.0"},
+    },
+}
+
+
+@pytest.mark.asyncio
+async def test_http_app_rejects_missing_bearer_with_401() -> None:
+    settings = get_settings()
+    app = build_app(settings).http_app(
+        transport="streamable-http",
+        middleware=oauth_middleware(settings),
+    )
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.post("/mcp", headers=_MCP_HEADERS, json=_INIT_BODY)
+
+    assert resp.status_code == 401
+    assert resp.headers.get("www-authenticate", "").startswith('Bearer error="invalid_token"')
 
 
 def test_build_app_smokes() -> None:

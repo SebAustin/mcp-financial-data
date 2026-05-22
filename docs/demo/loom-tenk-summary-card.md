@@ -26,12 +26,19 @@ make serve
 Connect Cursor or Claude Desktop to `http://127.0.0.1:8765` (or your
 `MCP_HOST` / `MCP_PORT`). Paste the dev Bearer token when prompted.
 
+Streamable HTTP requires both headers on every `POST /mcp`:
+
+```bash
+-H 'Content-Type: application/json'
+-H 'Accept: application/json, text/event-stream'
+```
+
 ## Scene timings
 
 | Time | Scene | Voiceover | Visual |
 | --- | --- | --- | --- |
 | 0:00–0:08 | Title | MCP server for SEC EDGAR, FRED, and Polygon with a citation-grounded 10-K extractor. | README architecture diagram (Sonnet 4.5 extractor + Opus 4.7 eval judge). |
-| 0:08–0:18 | OAuth | MCP client connects over OAuth 2.1; JWTs validated against JWKS (dev HS256 locally). | `make oauth-dev`, then `curl` without token → **401**, with token → authorized **POST /mcp**. |
+| 0:08–0:18 | OAuth | MCP client connects over OAuth 2.1; JWTs validated against JWKS (dev HS256 locally). | `make oauth-dev`, then `curl` without token → **401**, with token → **200** on `POST /mcp`. |
 | 0:18–0:35 | Tool call | Call `tenk.extract_section` on AAPL Item 1A. Claude Sonnet 4.5 returns citation-grounded facts via the Citations API. | Inline **TenKSummaryCard**: hover a pill → SEC EDGAR browse URL. |
 | 0:35–0:48 | Audit trail | Every surfaced fact has citations; uncited spans stay in `notes`. Smoke eval records exec-accuracy and citation coverage at 1.0 offline. | `cat evals/runs/<latest>/summary.json` from `make demo-prep`. |
 | 0:48–0:60 | Close | CI smoke eval on every PR; nightly full eval live with a $5 cap. Repo: github.com/SebAustin/mcp-financial-data. | GitHub Actions green + sticky eval-delta PR comment. |
