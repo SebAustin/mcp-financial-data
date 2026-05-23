@@ -100,6 +100,10 @@ demo-video-oauth: ## Labeled OAuth 401→200 check for Scene 4 (needs make serve
 demo-video-script: ## Print the 90s video teleprompter
 	@$(PY) scripts/demo_video.py script
 
+.PHONY: presentation-export
+presentation-export: ## Export docs/presentation.html slides to PNG for README
+	@$(PY) scripts/export_presentation_slides.py
+
 .PHONY: ui-build
 ui-build: ## Build TenKSummaryCard JS bundle (requires npm + public registry)
 	@if [ ! -f ui/tenk-summary-card/package.json ]; then \

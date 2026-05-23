@@ -19,14 +19,75 @@
 
 ## Demo
 
-Start with the [interactive deck](docs/presentation.html) for the full walkthrough.
+Start with the [interactive deck](docs/presentation.html) for the full walkthrough, or scroll the
+static slide exports below.
 
 | Step | Command |
 | --- | --- |
 | Present | [`docs/presentation.html`](docs/presentation.html) — 14-slide interactive project deck (open in any browser; `←` `→` to navigate, `O` for overview). PowerPoint version: [`docs/mcp-financial-data-presentation.pptx`](docs/mcp-financial-data-presentation.pptx) |
 | Live MCP | [`docs/demo/cursor-mcp-setup.md`](docs/demo/cursor-mcp-setup.md) — optional Cursor appendix |
+| Regenerate slides | `make presentation-export` — re-export PNGs from the HTML deck |
 
 **Story:** analyst asks for AAPL Item 1A risks → cited TenKSummaryCard → eval proof at 1.0 → stack + CI.
+
+![Slide 1 — Cover](docs/presentation/slides/slide-01-cover.png)
+
+<details>
+<summary><strong>All 14 presentation slides</strong> (static PNG exports from <code>docs/presentation.html</code>)</summary>
+
+**2 — The problem**
+
+![Slide 2 — The problem](docs/presentation/slides/slide-02-the-problem.png)
+
+**3 — What it is**
+
+![Slide 3 — What it is](docs/presentation/slides/slide-03-what-it-is.png)
+
+**4 — Architecture**
+
+![Slide 4 — Architecture](docs/presentation/slides/slide-04-architecture.png)
+
+**5 — The citation contract**
+
+![Slide 5 — The citation contract](docs/presentation/slides/slide-05-citation-contract.png)
+
+**6 — The output card**
+
+![Slide 6 — The output card](docs/presentation/slides/slide-06-output-card.png)
+
+**7 — OAuth 2.1 security**
+
+![Slide 7 — OAuth 2.1 security](docs/presentation/slides/slide-07-oauth-security.png)
+
+**8 — Data discipline**
+
+![Slide 8 — Data discipline](docs/presentation/slides/slide-08-data-discipline.png)
+
+**9 — Eval harness**
+
+![Slide 9 — Eval harness](docs/presentation/slides/slide-09-eval-harness.png)
+
+**10 — Engineering rigor**
+
+![Slide 10 — Engineering rigor](docs/presentation/slides/slide-10-engineering-rigor.png)
+
+**11 — The stack**
+
+![Slide 11 — The stack](docs/presentation/slides/slide-11-stack.png)
+
+**12 — Story demo**
+
+![Slide 12 — Story demo](docs/presentation/slides/slide-12-story-demo.png)
+
+**13 — Results (v0.1.0)**
+
+![Slide 13 — Results](docs/presentation/slides/slide-13-results.png)
+
+**14 — Recap & close**
+
+![Slide 14 — Recap & close](docs/presentation/slides/slide-14-recap.png)
+
+</details>
 
 ## Why this exists
 
