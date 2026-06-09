@@ -29,7 +29,7 @@ def test_props_model_rejects_extras() -> None:
     er = ExtractionResult(
         section="item_1_business",
         document_title="AAPL 10-K Item 1",
-        model="claude-sonnet-4-5-20260301",
+        model="claude-sonnet-4-6-20260301",
     )
     try:
         TenKSummaryCardProps.model_validate(
@@ -89,7 +89,7 @@ def test_render_envelope_facts_match_extraction() -> None:
     extraction = ExtractionResult(
         section="item_1a_risk_factors",
         document_title="AAPL 10-K FY2025 Item 1A",
-        model="claude-sonnet-4-5-20260301",
+        model="claude-sonnet-4-6-20260301",
         facts=(
             CitedClaim(
                 text="One cited fact.",

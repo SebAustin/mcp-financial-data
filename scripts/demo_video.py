@@ -84,7 +84,7 @@ TELEPROMPTER_SLIDES: Final[list[tuple[str, str]]] = [
     ),
     (
         "Slide 4 — The stack",
-        "MCP 2025-11-25, OAuth resource server, Sonnet 4.5 Citations API, "
+        "MCP 2025-11-25, OAuth resource server, Sonnet 4.6 Citations API, "
         "Opus 4.7 judge, smoke eval on every PR.",
     ),
 ]

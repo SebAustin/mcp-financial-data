@@ -1,4 +1,4 @@
-"""Citation-grounded 10-K extractor backed by Anthropic Claude Sonnet 4.5.
+"""Citation-grounded 10-K extractor backed by Anthropic Claude Sonnet 4.6.
 
 Hard contract (see ``.cursor/rules/citations.mdc`` and ADR 0003):
 

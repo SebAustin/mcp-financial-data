@@ -29,7 +29,7 @@ class Settings(BaseSettings):
 
     anthropic_api_key: SecretStr | None = Field(default=None, alias="ANTHROPIC_API_KEY")
     anthropic_model_primary: str = Field(
-        default="claude-sonnet-4-5", alias="ANTHROPIC_MODEL_PRIMARY"
+        default="claude-sonnet-4-6", alias="ANTHROPIC_MODEL_PRIMARY"
     )
     anthropic_model_judge: str = Field(default="claude-opus-4-7", alias="ANTHROPIC_MODEL_JUDGE")
 

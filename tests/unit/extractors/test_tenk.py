@@ -60,7 +60,7 @@ def _make_citation(
 def _make_message_payload(
     *,
     content: list[dict[str, Any]],
-    model: str = "claude-sonnet-4-5-20260301",
+    model: str = "claude-sonnet-4-6-20260301",
     input_tokens: int = 250,
     output_tokens: int = 60,
 ) -> dict[str, Any]:
@@ -130,7 +130,7 @@ def test_extraction_result_default_empty() -> None:
     er = ExtractionResult(
         section="item_1a_risk_factors",
         document_title="AAPL 10-K Item 1A",
-        model="claude-sonnet-4-5-20260301",
+        model="claude-sonnet-4-6-20260301",
     )
     assert er.facts == ()
     assert er.notes == ()

@@ -7,7 +7,7 @@ assignees: [SebAustin]
 ## Problem
 
 `extractors/tenk.py` is currently a typed stub. We need the live
-implementation that calls Claude Sonnet 4.5 with the Anthropic Citations
+implementation that calls Claude Sonnet 4.6 with the Anthropic Citations
 API (`citations={"enabled": True}`) and returns `CitedClaim` objects, each
 carrying at least one `Citation`.
 

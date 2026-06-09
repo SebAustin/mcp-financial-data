@@ -455,7 +455,7 @@ def build_demo_hub(
         <span class="node key">OAuth 2.1 JWT</span><span class="arrow">&rarr;</span>
         <span class="node">FastMCP Server</span><span class="arrow">&rarr;</span>
         <span class="node key">tenk.extract_section</span><span class="arrow">&rarr;</span>
-        <span class="node">Claude Sonnet 4.5 + Citations API</span><span class="arrow">&rarr;</span>
+        <span class="node">Claude Sonnet 4.6 + Citations API</span><span class="arrow">&rarr;</span>
         <span class="node key">TenKSummaryCard</span>
       </div>
       <div class="arch">

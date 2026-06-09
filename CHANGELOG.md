@@ -14,7 +14,7 @@ W1 milestone: OAuth 2.1 resource server, live data tools, citation-grounded
 - OAuth 2.1 JWT validation against external JWKS (`auth/oauth.py`).
 - Async EDGAR, FRED, and Polygon clients with Fair Access headers, rate
   limiting, retries, and 24-hour SQLite response cache.
-- Claude Sonnet 4.5 10-K extractor with Anthropic Citations API; uncited
+- Claude Sonnet 4.6 10-K extractor with Anthropic Citations API; uncited
   spans demoted to `[INFERENCE]` notes.
 - MCP Apps `TenKSummaryCard` inline UI with citation pills and SEC browse URLs.
 - Eval harness with offline fixtures, live dispatch, Opus 4.7 five-axis judge,

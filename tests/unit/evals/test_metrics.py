@@ -39,7 +39,7 @@ def test_citation_coverage_non_extractor_is_one() -> None:
 
 def test_citation_coverage_extractor_full() -> None:
     actual = {
-        "model": "claude-sonnet-4-5-20260301",
+        "model": "claude-sonnet-4-6-20260301",
         "facts": [
             {"text": "fact 1", "citations": [{"document_title": "x"}]},
             {"text": "fact 2", "citations": [{"document_title": "y"}]},
@@ -50,7 +50,7 @@ def test_citation_coverage_extractor_full() -> None:
 
 def test_citation_coverage_extractor_partial() -> None:
     actual = {
-        "model": "claude-sonnet-4-5-20260301",
+        "model": "claude-sonnet-4-6-20260301",
         "facts": [
             {"text": "fact 1", "citations": [{"document_title": "x"}]},
             {"text": "fact 2", "citations": []},

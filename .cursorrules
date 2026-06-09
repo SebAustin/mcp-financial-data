@@ -22,7 +22,7 @@ exactly what is asked, then stop.
 - Python 3.12. uv 0.5+ for dependency management. ruff 0.7+. mypy --strict.
 - pydantic v2.9+. FastAPI 0.115+. pytest 8+. httpx 0.28+ (never `requests`).
 - LangGraph 1.x (StateGraph, PostgresSaver, interrupt). LangChain 1.x.
-- Anthropic SDK ≥ 0.40 (Claude Sonnet 4.5 / Opus 4.7, Citations API enabled).
+- Anthropic SDK ≥ 0.40 (Claude Sonnet 4.6 / Opus 4.7, Citations API enabled).
 - MCP spec 2025-11-25. Official `mcp` Python SDK 1.x; FastMCP 2.x for ergonomics.
 - Snowflake Cortex GA features as of May 2026 only.
 - Terraform 1.10+ / OpenTofu 1.8+. AWS provider 6.x. Google provider 6.x.
@@ -105,7 +105,7 @@ be read by Anthropic / Cursor / Snowflake hiring managers. Trust is the product.
   do not pound the EDGAR endpoint.
 
 ## P3. Citations are non-optional in the 10-K extractor
-- `extractors/tenk.py` calls Claude Sonnet 4.5 with `citations={"enabled": True}`
+- `extractors/tenk.py` calls Claude Sonnet 4.6 with `citations={"enabled": True}`
   on every document block (per Anthropic Citations API).
 - The output type `CitedClaim` carries `text: str` AND `citations: list[Citation]`.
 - Any model-generated text returned WITHOUT a `citations` array is either

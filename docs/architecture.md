@@ -24,7 +24,7 @@ flowchart TB
         EdgarClient[EDGAR async client]
         FredClient[FRED async client]
         PolygonClient[Polygon async client]
-        Extractor["10-K extractor (Claude Sonnet 4.5)"]
+        Extractor["10-K extractor (Claude Sonnet 4.6)"]
         EvalHarness[Eval harness (Claude Opus 4.7 judge)]
         Apps[MCP Apps UI registry]
     end

@@ -104,7 +104,7 @@ OFFLINE_FIXTURES: dict[str, dict[str, Any]] = {
             },
         ],
         "notes": (),
-        "model": "claude-sonnet-4-5-20260301",
+        "model": "claude-sonnet-4-6-20260301",
         "input_tokens": 0,
         "output_tokens": 0,
         "cost_usd": 0.0,

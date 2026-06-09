@@ -6,7 +6,7 @@
 
 ## Context and Problem Statement
 
-The 10-K extractor calls Claude Sonnet 4.5 with the Anthropic **Citations
+The 10-K extractor calls Claude Sonnet 4.6 with the Anthropic **Citations
 API** for every section it processes (see ADR 0003). One eval `--full` run
 across the seed cases is hundreds of thousands of tokens; one hiring-manager
 demo can be the same on top. Two failure modes must be prevented:
@@ -72,12 +72,10 @@ def estimate_cost_usd(model_id: str, *, input_tokens: int, output_tokens: int) -
 
 * Numbers are USD per **million tokens**, the unit Anthropic publishes.
 * `PRICE_TABLE_VERSION` is a date string. Bump it when the table changes.
-* The current table covers portfolio fixture ids (`claude-sonnet-4-5-20260301`,
-  `claude-opus-4-7-20260301`), live API ids (`claude-sonnet-4-5`,
-  `claude-sonnet-4-6`, `claude-opus-4-7`), and **prefix fallback** for dated
-  snapshot ids returned by Anthropic (e.g. `claude-sonnet-4-5-20250929`).
-  Longest prefix wins so `claude-sonnet-4-6` is not mapped to Sonnet 4.5
-  pricing by mistake.
+* The current table covers portfolio fixture ids (`claude-sonnet-4-6-20260301`,
+  `claude-opus-4-7-20260301`), live API ids (`claude-sonnet-4-6`,
+  `claude-opus-4-7`), and **prefix fallback** for dated snapshot ids returned
+  by Anthropic (e.g. `claude-sonnet-4-6-20250929`).
 * `UnknownModelPricingError` is a `KeyError` subclass — Anthropic returning
   an unfamiliar model id is fatal, not estimated. The eval harness catches it
   before the offline-fixture `KeyError` handler and surfaces

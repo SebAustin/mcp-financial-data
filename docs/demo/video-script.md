@@ -34,7 +34,7 @@ Advance slides with **← →** arrow keys or click the numbered dots.
 
 **Say:**
 
-> The server calls `tenk.extract_section`. Claude Sonnet 4.5 returns only
+> The server calls `tenk.extract_section`. Claude Sonnet 4.6 returns only
 > citation-grounded facts via the Citations API. Every bullet on this card has
 > at least one SEC reference. Uncited model output never appears here.
 

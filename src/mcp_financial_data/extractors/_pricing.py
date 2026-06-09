@@ -56,32 +56,30 @@ class UnknownModelPricingError(KeyError):
     """Raised when the extractor returns a model id absent from the table."""
 
 
-# Sonnet 4.5 + Opus 4.7 published list prices, May 2026. Citations API does
+# Sonnet 4.6 + Opus 4.7 published list prices, May 2026. Citations API does
 # not change the per-token price; document tokens are billed as input.
-_SONNET_45 = ModelPricing(input_per_mtok=3.00, output_per_mtok=15.00)
+_SONNET_46 = ModelPricing(input_per_mtok=3.00, output_per_mtok=15.00)
 _OPUS_47 = ModelPricing(input_per_mtok=15.00, output_per_mtok=75.00)
 
 # Portfolio fixtures use dated ids; the live Anthropic API uses dateless ids
 # (see https://platform.claude.com/docs/en/about-claude/models/model-ids).
 _PORTFOLIO_MODEL_ALIASES: Final[dict[str, str]] = {
-    "claude-sonnet-4-5-20260301": "claude-sonnet-4-5",
+    "claude-sonnet-4-6-20260301": "claude-sonnet-4-6",
     "claude-opus-4-7-20260301": "claude-opus-4-7",
 }
 
 _PRICE_TABLE: Final[dict[str, ModelPricing]] = {
-    "claude-sonnet-4-5-20260301": _SONNET_45,
-    "claude-sonnet-4-5": _SONNET_45,
-    "claude-sonnet-4-6": _SONNET_45,
+    "claude-sonnet-4-6-20260301": _SONNET_46,
+    "claude-sonnet-4-6": _SONNET_46,
     "claude-opus-4-7-20260301": _OPUS_47,
     "claude-opus-4-7": _OPUS_47,
 }
 
-# Anthropic returns dated snapshot ids (``claude-sonnet-4-5-20250929``). Match
-# longest prefix first so ``claude-sonnet-4-5`` does not swallow ``4-6``.
+# Anthropic returns dated snapshot ids (``claude-sonnet-4-6-20250929``). Match
+# longest prefix first for ids absent from the explicit table above.
 _PRICING_PREFIXES: Final[tuple[tuple[str, ModelPricing], ...]] = (
     ("claude-opus-4-7", _OPUS_47),
-    ("claude-sonnet-4-6", _SONNET_45),
-    ("claude-sonnet-4-5", _SONNET_45),
+    ("claude-sonnet-4-6", _SONNET_46),
 )
 
 

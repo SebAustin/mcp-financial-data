@@ -2,7 +2,7 @@
 
 > An MCP server (spec **2025-11-25**) for **SEC EDGAR + FRED + Polygon.io** with
 > **OAuth 2.1**, a **citation-grounded 10-K extractor** powered by Claude
-> Sonnet 4.5, and an **MCP Apps inline UI** for the extracted summary.
+> Sonnet 4.6, and an **MCP Apps inline UI** for the extracted summary.
 >
 > Anchor audience: Anthropic Forward Deployed Engineering, Bridgewater /
 > Citadel / Anthropic Finance teams.
@@ -135,7 +135,7 @@ flowchart LR
     Router --> Polygon
     Router --> Extractor
     Extractor --> UI
-    Extractor ==>|"Sonnet 4.5 + Citations API"| Anthropic
+    Extractor ==>|"Sonnet 4.6 + Citations API"| Anthropic
     Evals ==>|"Opus 4.7 judge"| Anthropic
     Evals -.->|"replays tool calls"| Router
     EDGAR --> Cache
@@ -163,7 +163,7 @@ flowchart LR
 | Amber gate | OAuth 2.1 boundary — validated on every request |
 | Blue (filled) | Citation-grounded extractor + eval harness — the audited paths |
 | Green store | 24-hour SQLite response cache — keeps eval runs reproducible |
-| Purple | External Anthropic Messages API (Sonnet 4.5 extract, Opus 4.7 judge) |
+| Purple | External Anthropic Messages API (Sonnet 4.6 extract, Opus 4.7 judge) |
 
 ## Quickstart
 

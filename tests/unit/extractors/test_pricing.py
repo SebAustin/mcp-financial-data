@@ -24,15 +24,15 @@ def test_price_table_version_is_iso_date() -> None:
 
 
 def test_sonnet_pricing_row_present() -> None:
-    sonnet = get_model_pricing("claude-sonnet-4-5-20260301")
+    sonnet = get_model_pricing("claude-sonnet-4-6-20260301")
     assert sonnet.input_per_mtok == 3.00
     assert sonnet.output_per_mtok == 15.00
 
 
 def test_estimate_cost_matches_sonnet_table() -> None:
-    cost = estimate_cost_usd("claude-sonnet-4-5-20260301", input_tokens=1_000_000, output_tokens=0)
+    cost = estimate_cost_usd("claude-sonnet-4-6-20260301", input_tokens=1_000_000, output_tokens=0)
     assert cost == pytest.approx(3.00, abs=1e-6)
-    cost2 = estimate_cost_usd("claude-sonnet-4-5-20260301", input_tokens=0, output_tokens=1_000_000)
+    cost2 = estimate_cost_usd("claude-sonnet-4-6-20260301", input_tokens=0, output_tokens=1_000_000)
     assert cost2 == pytest.approx(15.00, abs=1e-6)
 
 
@@ -59,7 +59,7 @@ def test_resolve_api_model_id_maps_portfolio_fixture_ids() -> None:
 @pytest.mark.parametrize(
     "model_id",
     [
-        "claude-sonnet-4-5-20250929",
+        "claude-sonnet-4-6-20250929",
         "claude-sonnet-4-6",
         "claude-opus-4-7-20251101",
     ],

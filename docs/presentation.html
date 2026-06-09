@@ -301,7 +301,7 @@
     <span class="kicker"><span class="n">MCP</span> · spec 2025-11-25</span>
     <h1>An MCP server for financial data<br />that <span class="hl">cites its sources</span> — or stays silent.</h1>
     <p class="lede">SEC EDGAR + FRED + Polygon, behind OAuth 2.1, with a citation-grounded 10-K
-      extractor powered by Claude Sonnet 4.5 and an MCP Apps inline UI. Every model claim traces
+      extractor powered by Claude Sonnet 4.6 and an MCP Apps inline UI. Every model claim traces
       back to the filing, or it never ships.</p>
     <div class="badges">
       <span class="badge">CI <b>passing</b></span>
@@ -421,7 +421,7 @@
   <section class="slide">
     <span class="kicker"><span class="n">04</span> · The centrepiece</span>
     <h2>The citation contract: <span class="hl">cite the span, or drop the claim</span></h2>
-    <p class="lede">The 10-K extractor calls Claude Sonnet 4.5 with the Anthropic Citations API.
+    <p class="lede">The 10-K extractor calls Claude Sonnet 4.6 with the Anthropic Citations API.
       Its output is filtered through a contract no model output can bypass.</p>
     <div class="ba">
       <div class="col bad">
@@ -462,7 +462,7 @@
         <div class="fact">The Company is exposed to global macroeconomic conditions, including inflation, interest rates, and foreign exchange fluctuations.
           <br /><span class="cpill">↗ exposed to global macroeconomic conditions…</span></div>
         <div class="cfoot">
-          <span>model: claude-sonnet-4-5</span><span>citations: 2 / 2</span><span>cost: $0.0000</span>
+          <span>model: claude-sonnet-4-6</span><span>citations: 2 / 2</span><span>cost: $0.0000</span>
         </div>
       </div>
       <div class="mockside">
@@ -557,7 +557,7 @@
     <div class="grid3">
       <div class="card"><h3>🧩 Protocol layer</h3><p><code>fastmcp</code> + <code>mcp</code> on streamable HTTP, Starlette ASGI middleware, MCP spec 2025-11-25.</p></div>
       <div class="card"><h3>🌐 Data layer</h3><p><code>httpx</code> async clients, <code>tenacity</code> retries, a SQLite response cache, Pydantic v2 models throughout.</p></div>
-      <div class="card"><h3>🤖 Intelligence layer</h3><p>Anthropic SDK — Sonnet 4.5 extractor via the Citations API, Opus 4.7 as the eval judge.</p></div>
+      <div class="card"><h3>🤖 Intelligence layer</h3><p>Anthropic SDK — Sonnet 4.6 extractor via the Citations API, Opus 4.7 as the eval judge.</p></div>
       <div class="card"><h3>🔐 Auth layer</h3><p><code>authlib</code> + <code>PyJWT[crypto]</code> for RFC 6750 resource-server validation against a JWKS.</p></div>
       <div class="card"><h3>📊 Observability</h3><p><code>structlog</code> structured logging — bound context on every tool call, no stray <code>print()</code>.</p></div>
       <div class="card"><h3>🛠️ Tooling</h3><p><code>uv</code> for env + lock, <code>ruff</code>, <code>mypy</code>, <code>pytest</code>, pre-commit, Docker, GitHub Actions.</p></div>
